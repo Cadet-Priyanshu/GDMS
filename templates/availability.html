@@ -1,0 +1,175 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rest & Leave Management - GDMS</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f4f6f9;
+            margin: 0;
+            padding: 25px;
+        }
+
+        .container {
+            max-width: 950px;
+            margin: auto;
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+        }
+
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        h1 { color: #1e293b; }
+
+        a {
+            color: #2563eb;
+            text-decoration: none;
+        }
+
+        input, select, button {
+            padding: 9px;
+            border: 1px solid #cbd5e1;
+            border-radius: 5px;
+        }
+
+        button {
+            background: #2563eb;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        th, td {
+            padding: 12px 8px;
+            border-bottom: 1px solid #e2e8f0;
+            text-align: left;
+        }
+
+        th { background: #f1f5f9; }
+
+        .save-button { background: #15803d; }
+
+        .clear-button { background: #64748b; }
+
+        .flash {
+            padding: 10px;
+            background: #dcfce7;
+            margin-top: 15px;
+            border-radius: 5px;
+        }
+
+        @media (max-width: 650px) {
+            body { padding: 10px; }
+
+            .container {
+                padding: 12px;
+                overflow-x: auto;
+            }
+
+            table { min-width: 650px; }
+        }
+    </style>
+</head>
+
+<body>
+<div class="container">
+
+    <div class="top-bar">
+        <h1>Rest & Leave Management</h1>
+        <a href="{{ url_for('dashboard') }}">← Back to Dashboard</a>
+    </div>
+
+    <form method="GET" action="{{ url_for('availability') }}">
+        <label>Select Date:</label>
+        <input type="date" name="duty_date" value="{{ selected_date }}" required>
+        <button type="submit">View</button>
+    </form>
+
+    {% with messages = get_flashed_messages() %}
+        {% for message in messages %}
+            <div class="flash">{{ message }}</div>
+        {% endfor %}
+    {% endwith %}
+
+    <h3>Date: {{ selected_date }}</h3>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Guard ID</th>
+                <th>Guard Name</th>
+                <th>Availability</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+
+        <tbody>
+        {% for guard in guards %}
+            <tr>
+                <td>{{ guard.guard_id }}</td>
+                <td>
+                    {{ guard.guard_name }}
+                    {% if not guard.is_active %}(Inactive){% endif %}
+                </td>
+
+                <td>
+                    <form method="POST"
+                          action="{{ url_for('availability') }}"
+                          id="form-{{ loop.index }}">
+
+                        <input type="hidden" name="csrf_token"
+                               value="{{ csrf_token() }}">
+
+                        <input type="hidden" name="guard_id"
+                               value="{{ guard.guard_id }}">
+
+                        <input type="hidden" name="duty_date"
+                               value="{{ selected_date }}">
+
+                        <select name="status">
+                            <option value="">Available / Clear</option>
+
+                            <option value="REST"
+                                {% if guard.day_status == 'REST' %}selected{% endif %}>
+                                Rest
+                            </option>
+
+                            <option value="LEAVE"
+                                {% if guard.day_status == 'LEAVE' %}selected{% endif %}>
+                                Leave
+                            </option>
+                        </select>
+                    </form>
+                </td>
+
+                <td>
+                    <button type="submit" form="form-{{ loop.index }}"
+                            class="save-button">
+                        Save
+                    </button>
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+
+</div>
+</body>
+</html>

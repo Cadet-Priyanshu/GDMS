@@ -1,0 +1,284 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GDMS | Daily Duty Roster</title>
+
+    <style>
+        body {
+            margin: 0;
+            padding: 25px;
+            font-family: Arial, sans-serif;
+            background: #eef2f7;
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: auto;
+        }
+
+        .panel {
+            background: white;
+            padding: 22px;
+            margin-bottom: 20px;
+            border-radius: 10px;
+            overflow-x: auto;
+        }
+
+        input, select, button {
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+
+        button {
+            background: #183153;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 750px;
+        }
+
+        th, td {
+            padding: 12px;
+            border-bottom: 1px solid #ddd;
+            text-align: left;
+        }
+
+        th {
+            background: #183153;
+            color: white;
+        }
+
+        .success {
+            color: green;
+        }
+
+        .error {
+            color: red;
+        }
+
+        a {
+            color: #183153;
+        }
+
+        .assignment-form {
+            display: flex;
+            gap: 7px;
+            flex-wrap: wrap;
+        }
+
+        .status-warning {
+            display: inline-block;
+            color: #b45309;
+            background: #fef3c7;
+            padding: 5px 8px;
+            border-radius: 5px;
+            font-size: 12px;
+            margin-top: 6px;
+        }
+
+        .inactive-warning {
+            display: inline-block;
+            color: #b91c1c;
+            background: #fee2e2;
+            padding: 5px 8px;
+            border-radius: 5px;
+            font-size: 12px;
+            margin-top: 6px;
+        }
+    </style>
+</head>
+
+<body>
+<div class="container">
+
+    <h1>Daily Duty Roster</h1>
+
+    <p>
+        <a href="{{ url_for('dashboard') }}">← Back to Dashboard</a>
+    </p>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for category, message in messages %}
+            <p class="{{ category }}">{{ message }}</p>
+        {% endfor %}
+    {% endwith %}
+
+    <div class="panel">
+        <h2>Select Duty Date</h2>
+
+        <form method="GET" action="{{ url_for('roster') }}">
+            <input type="date"
+                   name="date"
+                   value="{{ selected_date }}"
+                   required>
+
+            <button type="submit">View Roster</button>
+        </form>
+
+        <h3>Roster for {{ selected_date }}</h3>
+    </div>
+
+    <div class="panel">
+        <h2>Duty Assignments</h2>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Shift</th>
+                    <th>Timing</th>
+                    <th>Post</th>
+                    <th>Planned Guard</th>
+                    <th>Availability</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+
+            <tbody>
+
+                {% for item in roster_rows %}
+
+                <tr>
+
+                    <td>{{ item.shift_name }}</td>
+
+                    <td>
+                        {{ item.start_time }} – {{ item.end_time }}
+
+                        {% if item.shift_name == 'Shift 3' %}
+                            (Next day)
+                        {% endif %}
+                    </td>
+
+                    <td>{{ item.post_code }}</td>
+
+                    <td>
+                        {% if item.planned_guard_name %}
+                            {{ item.planned_guard_name }}
+                        {% else %}
+                            <span>Not assigned</span>
+                        {% endif %}
+                    </td>
+
+                    <td>
+
+                        {% if item.planned_guard_day_status %}
+
+                            <span class="status-warning">
+                                {{ item.planned_guard_day_status }}
+                            </span>
+
+                        {% elif item.planned_guard_id and not item.planned_guard_is_active %}
+
+                            <span class="inactive-warning">
+                                INACTIVE GUARD
+                            </span>
+
+                        {% elif item.planned_guard_id %}
+
+                            <span style="color:green;">
+                                Available
+                            </span>
+
+                        {% else %}
+
+                            <span>—</span>
+
+                        {% endif %}
+
+                    </td>
+
+                    <td>
+
+                        {% if current_user.role in ['ADMIN', 'SUPERVISOR'] %}
+
+                        <form class="assignment-form"
+                              method="POST"
+                              action="{{ url_for('roster') }}">
+
+                            <input type="hidden"
+                                   name="csrf_token"
+                                   value="{{ csrf_token() }}">
+
+                            <input type="hidden"
+                                   name="duty_date"
+                                   value="{{ selected_date }}">
+
+                            <input type="hidden"
+                                   name="shift_id"
+                                   value="{{ item.shift_id }}">
+
+                            <input type="hidden"
+                                   name="post_id"
+                                   value="{{ item.post_id }}">
+
+                            <select name="guard_id">
+
+                                <option value="">Unassign</option>
+
+                                <!-- Preserve an already assigned guard
+                                     if now on Rest/Leave or inactive -->
+                                {% if item.planned_guard_id and
+                                      (item.planned_guard_day_status or
+                                       not item.planned_guard_is_active) %}
+
+                                    <option value="{{ item.planned_guard_id }}" selected>
+                                        {{ item.planned_guard_name }}
+                                        (Already assigned)
+                                    </option>
+
+                                {% endif %}
+
+                                {% for guard in active_guards %}
+
+                                    <option value="{{ guard.guard_id }}"
+                                        {% if item.planned_guard_id == guard.guard_id %}
+                                            selected
+                                        {% endif %}>
+
+                                        {{ guard.guard_name }}
+                                        ({{ guard.guard_id }})
+
+                                    </option>
+
+                                {% endfor %}
+
+                            </select>
+
+                            <button type="submit">Save</button>
+
+                        </form>
+
+                        {% else %}
+
+                            Read only
+
+                        {% endif %}
+
+                    </td>
+
+                </tr>
+
+                {% else %}
+
+                <tr>
+                    <td colspan="6">No active duty posts found.</td>
+                </tr>
+
+                {% endfor %}
+
+            </tbody>
+        </table>
+    </div>
+
+</div>
+</body>
+</html>

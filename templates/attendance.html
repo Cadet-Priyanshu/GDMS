@@ -1,0 +1,181 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Actual Attendance - GDMS</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f4f6f9;
+            margin: 0;
+            padding: 25px;
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: auto;
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+        }
+
+        h1 {
+            color: #1e293b;
+        }
+
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        a {
+            color: #2563eb;
+            text-decoration: none;
+        }
+
+        input, select, button {
+            padding: 9px;
+            border: 1px solid #cbd5e1;
+            border-radius: 5px;
+        }
+
+        button {
+            background: #2563eb;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        th, td {
+            padding: 12px 8px;
+            border-bottom: 1px solid #e2e8f0;
+            text-align: left;
+        }
+
+        th {
+            background: #f1f5f9;
+        }
+
+        .save-button {
+            background: #15803d;
+        }
+
+        .flash {
+            padding: 10px;
+            background: #dcfce7;
+            margin-bottom: 15px;
+            border-radius: 5px;
+        }
+
+        @media (max-width: 700px) {
+            body {
+                padding: 10px;
+            }
+
+            .container {
+                padding: 12px;
+                overflow-x: auto;
+            }
+
+            table {
+                min-width: 850px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+<div class="container">
+
+    <div class="top-bar">
+        <h1>Actual Attendance</h1>
+        <a href="{{ url_for('dashboard') }}">← Back to Dashboard</a>
+    </div>
+
+    <form method="GET" action="{{ url_for('attendance') }}">
+        <label>Select Duty Date:</label>
+        <input type="date" name="duty_date" value="{{ selected_date }}">
+        <button type="submit">View</button>
+    </form>
+
+    {% with messages = get_flashed_messages() %}
+        {% for message in messages %}
+            <div class="flash">{{ message }}</div>
+        {% endfor %}
+    {% endwith %}
+
+    <h3>Duty Date: {{ selected_date }}</h3>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Shift</th>
+                <th>Post</th>
+                <th>Planned Guard</th>
+                <th>Actual Status</th>
+                <th>Replacement Guard</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+
+        <tbody>
+        {% for slot in slots %}
+            <tr>
+                <form method="POST" action="{{ url_for('attendance') }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="slot_id" value="{{ slot.slot_id }}">
+                    <input type="hidden" name="duty_date" value="{{ selected_date }}">
+
+                    <td>{{ slot.shift_name }}</td>
+                    <td>{{ slot.post_code }}</td>
+                    <td>{{ slot.planned_guard_name or 'Not Assigned' }}</td>
+
+                    <td>
+                        <select name="actual_status">
+                            {% for status in ['PENDING', 'PRESENT', 'ABSENT', 'REST', 'LEAVE', 'CANCELLED', 'REPLACED'] %}
+                                <option value="{{ status }}"
+                                    {% if slot.actual_status == status %}selected{% endif %}>
+                                    {{ status }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </td>
+
+                    <td>
+                        <select name="actual_guard_id">
+                            <option value="">Select guard</option>
+                            {% for guard in guards %}
+                                <option value="{{ guard.guard_id }}"
+                                    {% if slot.actual_guard_id == guard.guard_id %}selected{% endif %}>
+                                    {{ guard.guard_name }} ({{ guard.guard_id }})
+                                    {% if not guard.is_active %}- Inactive{% endif %}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </td>
+
+                    <td>
+                        <button type="submit" class="save-button">Save</button>
+                    </td>
+                </form>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+
+</div>
+</body>
+</html>

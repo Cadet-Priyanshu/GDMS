@@ -1,0 +1,75 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GDMS | Dashboard</title>
+
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #eef2f7;
+        }
+
+        header {
+            background: #183153;
+            color: white;
+            padding: 20px 30px;
+        }
+
+        main {
+            padding: 30px;
+        }
+
+        .welcome {
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+        }
+
+        button {
+            background: #183153;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <h2>GDMS Dashboard</h2>
+    </header>
+
+    <main>
+        <div class="welcome">
+            <h2>Welcome, {{ current_user.username }}!</h2>
+
+            <p>Your role: {{ current_user.role }}</p>
+
+            <p>Guard Duty Management System is running.</p>
+            <p>
+    <a href="{{ url_for('guards') }}">Manage Guards</a>
+</p>
+<p>
+    <a href="{{ url_for('roster') }}">Daily Duty Roster</a>
+</p>
+<a href="{{ url_for('attendance') }}">Actual Attendance</a>
+<p>
+<a href="{{ url_for('availability') }}">Rest & Leave Management</a>
+</p>
+
+            <form method="POST" action="{{ url_for('logout') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit">Logout</button>
+            </form>
+        </div>
+    </main>
+
+</body>
+</html>

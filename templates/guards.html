@@ -1,0 +1,196 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GDMS | Guard Management</title>
+
+    <style>
+        body {
+            margin: 0;
+            padding: 25px;
+            font-family: Arial, sans-serif;
+            background: #eef2f7;
+        }
+
+        .container {
+            max-width: 950px;
+            margin: auto;
+        }
+
+        .panel {
+            background: white;
+            padding: 25px;
+            margin-bottom: 20px;
+            border-radius: 10px;
+        }
+
+        input {
+            padding: 11px;
+            margin: 8px 5px 8px 0;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+
+        button {
+            padding: 11px 20px;
+            background: #183153;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 13px;
+            border-bottom: 1px solid #ddd;
+            text-align: left;
+        }
+
+        th {
+            background: #183153;
+            color: white;
+        }
+
+        .success {
+            color: green;
+        }
+
+        .error {
+            color: red;
+        }
+
+        a {
+            color: #183153;
+        }
+    </style>
+</head>
+
+<body>
+<div class="container">
+
+    <h1>Guard Management</h1>
+    <p><a href="{{ url_for('dashboard') }}">← Back to Dashboard</a></p>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for category, message in messages %}
+            <p class="{{ category }}">{{ message }}</p>
+        {% endfor %}
+    {% endwith %}
+
+    {% if current_user.role in ['ADMIN', 'SUPERVISOR'] %}
+    <div class="panel">
+        <h2>Add New Guard</h2>
+
+        <form method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+            <input
+                type="text"
+                name="guard_id"
+                placeholder="Enter Guard ID"
+                maxlength="30"
+                required
+            >
+
+            <input
+                type="text"
+                name="guard_name"
+                placeholder="Enter Guard Name"
+                maxlength="100"
+                required
+            >
+
+            <button type="submit">Add Guard</button>
+        </form>
+    </div>
+    {% endif %}
+
+    <div class="panel">
+        <h2>Registered Guards</h2>
+
+        <table>
+           <thead>
+    <tr>
+        <th>Guard ID</th>
+        <th>Guard Name</th>
+        <th>Status</th>
+        <th>Actions</th>
+    </tr>
+</thead>
+
+            
+<tbody>
+    {% for guard in guards %}
+    <tr>
+        <td>{{ guard.guard_id }}</td>
+
+        <td>
+            {% if current_user.role in ['ADMIN', 'SUPERVISOR'] %}
+            <form method="POST"
+                  action="{{ url_for('edit_guard', guard_id=guard.guard_id) }}">
+
+                <input type="hidden"
+                       name="csrf_token"
+                       value="{{ csrf_token() }}">
+
+                <input type="text"
+                       name="guard_name"
+                       value="{{ guard.guard_name }}"
+                       maxlength="100"
+                       required>
+
+                <button type="submit">Save</button>
+            </form>
+            {% else %}
+                {{ guard.guard_name }}
+            {% endif %}
+        </td>
+
+        <td>
+            {% if guard.is_active %}
+                Active
+            {% else %}
+                Inactive
+            {% endif %}
+        </td>
+
+        <td>
+            {% if current_user.role in ['ADMIN', 'SUPERVISOR'] %}
+            <form method="POST"
+                  action="{{ url_for('toggle_guard', guard_id=guard.guard_id) }}">
+
+                <input type="hidden"
+                       name="csrf_token"
+                       value="{{ csrf_token() }}">
+
+                {% if guard.is_active %}
+                    <button type="submit">Deactivate</button>
+                {% else %}
+                    <button type="submit">Activate</button>
+                {% endif %}
+            </form>
+            {% else %}
+                Read only
+            {% endif %}
+        </td>
+    </tr>
+    {% else %}
+    <tr>
+        <td colspan="4">No guards registered yet.</td>
+    </tr>
+    {% endfor %}
+</tbody>
+
+        </table>
+    </div>
+
+</div>
+</body>
+</html>
