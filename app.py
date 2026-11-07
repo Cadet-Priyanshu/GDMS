@@ -1,4 +1,5 @@
 
+import ssl
 from flask import Flask, render_template, redirect, url_for, flash, request
 import pymysql
 from datetime import date
@@ -26,14 +27,23 @@ login_manager.login_view = "login"
 login_manager.login_message = "Please log in to continue."
 
 # Database connection
+
 def get_db_connection():
-    return pymysql.connect(
-        host=app.config["DB_HOST"],
-        user=app.config["DB_USER"],
-        password=app.config["DB_PASSWORD"],
-        database=app.config["DB_NAME"],
-        cursorclass=pymysql.cursors.DictCursor
+    ssl_context = ssl.create_default_context(
+        cafile=app.config["TIDB_SSL_CA"]
     )
+
+    return pymysql.connect(
+        host=app.config["TIDB_HOST"],
+        port=app.config["TIDB_PORT"],
+        user=app.config["TIDB_USER"],
+        password=app.config["TIDB_PASSWORD"],
+        database=app.config["TIDB_NAME"],
+        ssl=ssl_context,
+        cursorclass=pymysql.cursors.DictCursor,
+        connect_timeout=20
+    )
+
 
 
 # Login form with CSRF protection
