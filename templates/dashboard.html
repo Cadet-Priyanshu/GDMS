@@ -63,7 +63,9 @@
 <p>
 <a href="{{ url_for('availability') }}">Rest & Leave Management</a>
 </p>
-
+{% if current_user.role == "ADMIN" %}
+    <a href="{{ url_for('manage_users') }}">Manage Users</a>
+{% endif %}
             <form method="POST" action="{{ url_for('logout') }}">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <button type="submit">Logout</button>

@@ -14,7 +14,7 @@ from flask_login import (
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, SubmitField
 from wtforms.validators import DataRequired
-from werkzeug.security import check_password_hash
+from werkzeug.security import check_password_hash, generate_password_hash
 
 
 app = Flask(__name__)
@@ -701,6 +701,74 @@ def availability():
 
     finally:
         cursor.close()
+        connection.close()
+
+@app.route("/users", methods=["GET", "POST"])
+@login_required
+def manage_users():
+
+    # Only Admin can access this page
+    if current_user.role != "ADMIN":
+        flash("You are not authorized to access this page.")
+        return redirect(url_for("dashboard"))
+
+    connection = get_db_connection()
+
+    try:
+        with connection.cursor() as cursor:
+
+            if request.method == "POST":
+                username = request.form.get("username", "").strip()
+                password = request.form.get("password", "")
+
+                if not username or not password:
+                    flash("Username and password are required.")
+
+                elif len(username) > 50:
+                    flash("Username cannot exceed 50 characters.")
+
+                elif len(password) < 12:
+                    flash("Password must be at least 12 characters.")
+
+                else:
+                    cursor.execute(
+                        "SELECT user_id FROM users WHERE username = %s",
+                        (username,)
+                    )
+
+                    if cursor.fetchone():
+                        flash("This username already exists.")
+
+                    else:
+                        password_hash = generate_password_hash(password)
+
+                        cursor.execute(
+                            """
+                            INSERT INTO users
+                            (username, password_hash, role, is_active)
+                            VALUES (%s, %s, 'SUPERVISOR', 1)
+                            """,
+                            (username, password_hash)
+                        )
+
+                        connection.commit()
+                        flash("Supervisor account created successfully!")
+
+                return redirect(url_for("manage_users"))
+
+            cursor.execute(
+                """
+                SELECT user_id, username, role, is_active, created_at
+                FROM users
+                ORDER BY user_id
+                """
+            )
+
+            users = cursor.fetchall()
+
+            return render_template("users.html", users=users)
+
+    finally:
         connection.close()
 
 if __name__ == "__main__":
