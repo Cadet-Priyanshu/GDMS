@@ -1,5 +1,6 @@
 
 import ssl
+import re
 from flask import Flask, render_template, redirect, url_for, flash, request
 import pymysql
 from datetime import date
@@ -25,6 +26,21 @@ login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = "login"
 login_manager.login_message = "Please log in to continue."
+
+
+
+def natural_guard_sort_key(guard):
+    """
+    Sort guard IDs naturally: G2 comes before G10.
+    Accepts either a guard dictionary or a plain guard ID.
+    """
+    guard_id = guard.get("guard_id", "") if isinstance(guard, dict) else guard
+    parts = re.split(r"(\d+)", str(guard_id))
+    return tuple(
+        (1, int(part)) if part.isdigit() else (0, part.casefold())
+        for part in parts
+    )
+
 
 # Database connection
 
@@ -198,6 +214,7 @@ def guards():
                 """
             )
             guard_list = cursor.fetchall()
+            guard_list = sorted(guard_list, key=natural_guard_sort_key)
     finally:
         connection.close()
 
@@ -278,7 +295,8 @@ def toggle_guard(guard_id):
     return redirect(url_for("guards"))
 
 
-# Daily Duty Roster
+
+# Daily Duty Entry
 @app.route("/roster", methods=["GET", "POST"])
 @login_required
 def roster():
@@ -286,103 +304,221 @@ def roster():
     if request.method == "POST":
 
         if current_user.role not in ["ADMIN", "SUPERVISOR"]:
-            flash("You do not have permission to edit the roster.", "error")
+            flash("You do not have permission to enter duty records.", "error")
             return redirect(url_for("roster"))
 
         duty_date = request.form.get("duty_date", "").strip()
-        guard_id = request.form.get("guard_id", "").strip() or None
 
         try:
             selected_date = date.fromisoformat(duty_date)
         except ValueError:
-            flash("Please select a valid date.", "error")
+            flash("Please select a valid duty date.", "error")
             return redirect(url_for("roster"))
-
-        try:
-            shift_id = int(request.form.get("shift_id", ""))
-            post_id = int(request.form.get("post_id", ""))
-        except ValueError:
-            flash("Invalid shift or post.", "error")
-            return redirect(url_for("roster", date=duty_date))
 
         connection = get_db_connection()
 
         try:
             with connection.cursor() as cursor:
 
-                # Confirm that this post operates in this shift
-                cursor.execute(
-                    """
-                    SELECT a.post_id
+                # Load the exact active post/shift combinations for this date sheet.
+                cursor.execute("""
+                    SELECT a.shift_id, a.post_id
                     FROM post_shift_availability a
                     JOIN posts p ON p.post_id = a.post_id
-                    WHERE a.post_id = %s
-                    AND a.shift_id = %s
-                    AND a.is_active = TRUE
-                    AND p.is_active = TRUE
-                    """,
-                    (post_id, shift_id)
+                    WHERE a.is_active = TRUE
+                      AND p.is_active = TRUE
+                """)
+                valid_slots = sorted(
+                    (row["shift_id"], row["post_id"])
+                    for row in cursor.fetchall()
                 )
 
-                if not cursor.fetchone():
-                    flash("This post is not available in the selected shift.", "error")
-                    return redirect(url_for("roster", date=duty_date))
-
-                # Only active guards can receive new assignments
-                if guard_id:
-                    cursor.execute(
-                        """
-                        SELECT guard_id
-                        FROM guards
-                        WHERE guard_id = %s AND is_active = TRUE
-                        """,
-                        (guard_id,)
+                if len(valid_slots) != 15:
+                    raise ValueError(
+                        "The duty configuration should contain exactly 15 active slots. "
+                        "Please check Post & Shift availability before saving."
                     )
 
-                    if not cursor.fetchone():
-                        flash("Selected guard is not active or does not exist.", "error")
-                        return redirect(url_for("roster", date=duty_date))
+                # Valid guard IDs, including inactive guards, so past records
+                # can still be entered for guards who have since been deactivated.
+                cursor.execute("SELECT guard_id FROM guards")
+                valid_guards = {
+                    str(row["guard_id"]) for row in cursor.fetchall()
+                }
 
-                    # Prevent assigning guards on Rest or Leave
-                    cursor.execute(
-                        """
-                        SELECT status
-                        FROM guard_day_status
-                        WHERE guard_id = %s
-                        AND duty_date = %s
-                        """,
-                        (guard_id, selected_date)
-                    )
+                # Guards marked Rest/Leave for this date cannot be assigned
+                # as either the planned guard or the actual replacement.
+                cursor.execute("""
+                    SELECT guard_id, status
+                    FROM guard_day_status
+                    WHERE duty_date = %s
+                """, (selected_date,))
+                unavailable_guards = {
+                    str(row["guard_id"]): row["status"]
+                    for row in cursor.fetchall()
+                }
 
-                    day_status = cursor.fetchone()
+                allowed_statuses = {
+                    "PENDING", "PRESENT", "REPLACED",
+                    "ABSENT", "REST", "LEAVE", "CANCELLED"
+                }
 
-                    if day_status:
-                        flash(
-                            f"This guard is marked {day_status['status']} "
-                            "on this date and cannot be assigned.",
-                            "error"
+                entries = []
+                guard_assignments = {}
+
+                for shift_id, post_id in valid_slots:
+                    key = f"{shift_id}_{post_id}"
+
+                    planned_id = (
+                        request.form.get(f"planned_{key}") or ""
+                    ).strip() or None
+
+                    replacement_id = (
+                        request.form.get(f"actual_{key}") or ""
+                    ).strip() or None
+
+                    status = (
+                        request.form.get(f"status_{key}") or ""
+                    ).strip().upper()
+
+                    # A fully blank slot means no record for that slot.
+                    if not planned_id and not replacement_id and not status:
+                        continue
+
+                    if not status:
+                        raise ValueError(
+                            f"Select a Duty Result for Shift {shift_id}, Post {post_id}."
                         )
-                        return redirect(url_for("roster", date=duty_date))
 
-                # Save or update planned assignment
+                    if status not in allowed_statuses:
+                        raise ValueError(
+                            f"Invalid Duty Result for Shift {shift_id}, Post {post_id}."
+                        )
+
+                    if planned_id and planned_id not in valid_guards:
+                        raise ValueError(
+                            f"Originally assigned guard {planned_id} does not exist."
+                        )
+
+                    if replacement_id and replacement_id not in valid_guards:
+                        raise ValueError(
+                            f"Actual guard {replacement_id} does not exist."
+                        )
+
+                    if planned_id and planned_id in unavailable_guards:
+                        raise ValueError(
+                            f"Guard {planned_id} is marked "
+                            f"{unavailable_guards[planned_id]} for this date "
+                            f"and cannot be assigned."
+                        )
+
+                    if status == "PRESENT":
+                        if not planned_id:
+                            raise ValueError(
+                                f"Select the originally assigned guard for "
+                                f"Shift {shift_id}, Post {post_id} before marking Present."
+                            )
+                        actual_id = planned_id
+
+                    elif status == "REPLACED":
+                        if not planned_id or not replacement_id:
+                            raise ValueError(
+                                f"For Shift {shift_id}, Post {post_id}, select both "
+                                f"the originally assigned guard and the replacement guard."
+                            )
+
+                        if replacement_id == planned_id:
+                            raise ValueError(
+                                f"The replacement guard must be different from "
+                                f"the originally assigned guard at Shift {shift_id}, "
+                                f"Post {post_id}."
+                            )
+
+                        if replacement_id in unavailable_guards:
+                            raise ValueError(
+                                f"Replacement guard {replacement_id} is marked "
+                                f"{unavailable_guards[replacement_id]} for this date "
+                                f"and cannot be assigned."
+                            )
+
+                        actual_id = replacement_id
+
+                    else:
+                        # PENDING, ABSENT, REST, LEAVE and CANCELLED
+                        # do not award duty credit to an actual guard.
+                        actual_id = None
+
+                    # A guard may appear only once per shift across BOTH
+                    # planned and actual assignments.
+                    slot_identity = (shift_id, post_id)
+                    for guard_id in {planned_id, actual_id} - {None}:
+                        assignment_identity = (shift_id, guard_id)
+                        previous_slot = guard_assignments.get(assignment_identity)
+
+                        if previous_slot is not None and previous_slot != slot_identity:
+                            raise ValueError(
+                                f"Guard {guard_id} is assigned to more than one "
+                                f"post in Shift {shift_id}."
+                            )
+
+                        guard_assignments[assignment_identity] = slot_identity
+
+                    entries.append((
+                        selected_date,
+                        shift_id,
+                        post_id,
+                        planned_id,
+                        actual_id,
+                        status
+                    ))
+
+                # Replace the complete date sheet atomically.
+                # Clearing first avoids transient unique-index conflicts when
+                # assignments are swapped between posts. A rollback restores
+                # the previous date sheet if any insert fails.
                 cursor.execute(
-                    """
-                    INSERT INTO duty_slots
-                        (duty_date, shift_id, post_id, planned_guard_id)
-                    VALUES (%s, %s, %s, %s)
-                    ON DUPLICATE KEY UPDATE
-                        planned_guard_id = VALUES(planned_guard_id)
-                    """,
-                    (selected_date, shift_id, post_id, guard_id)
+                    "DELETE FROM duty_slots WHERE duty_date = %s",
+                    (selected_date,)
                 )
+
+                for entry in entries:
+                    cursor.execute("""
+                        INSERT INTO duty_slots
+                        (
+                            duty_date,
+                            shift_id,
+                            post_id,
+                            planned_guard_id,
+                            actual_guard_id,
+                            actual_status
+                        )
+                        VALUES (%s, %s, %s, %s, %s, %s)
+                    """, entry)
 
             connection.commit()
-            flash("Roster assignment saved successfully!", "success")
+
+            flash(
+                f"Saved {len(entries)} of 15 duty slots for {selected_date}.",
+                "success"
+            )
+
+        except ValueError as error:
+            connection.rollback()
+            flash(str(error), "error")
 
         except pymysql.err.IntegrityError:
             connection.rollback()
             flash(
-                "This guard is already assigned to another post in this shift.",
+                "A guard has been assigned more than once in the same shift. "
+                "No changes were saved. Please review all 15 slots.",
+                "error"
+            )
+
+        except Exception:
+            connection.rollback()
+            app.logger.exception("Error saving daily duty records.")
+            flash(
+                "An unexpected error occurred. No changes were saved.",
                 "error"
             )
 
@@ -391,7 +527,7 @@ def roster():
 
         return redirect(url_for("roster", date=duty_date))
 
-    # Display roster for selected date
+    # GET: load the selected date's complete 15-slot duty sheet.
     selected_date = request.args.get("date", date.today().isoformat())
 
     try:
@@ -404,9 +540,7 @@ def roster():
     try:
         with connection.cursor() as cursor:
 
-            # Load roster and Rest/Leave status of assigned guards
-            cursor.execute(
-                """
+            cursor.execute("""
                 SELECT
                     s.shift_id,
                     s.shift_name,
@@ -415,9 +549,10 @@ def roster():
                     p.post_id,
                     p.post_code,
                     ds.planned_guard_id,
-                    g.guard_name AS planned_guard_name,
-                    g.is_active AS planned_guard_is_active,
-                    gs.status AS planned_guard_day_status
+                    pg.guard_name AS planned_guard_name,
+                    ds.actual_guard_id,
+                    ag.guard_name AS actual_guard_name,
+                    ds.actual_status
                 FROM post_shift_availability a
                 JOIN posts p ON p.post_id = a.post_id
                 JOIN shifts s ON s.shift_id = a.shift_id
@@ -425,38 +560,31 @@ def roster():
                     ON ds.duty_date = %s
                     AND ds.shift_id = s.shift_id
                     AND ds.post_id = p.post_id
-                LEFT JOIN guards g
-                    ON g.guard_id = ds.planned_guard_id
-                LEFT JOIN guard_day_status gs
-                    ON gs.guard_id = ds.planned_guard_id
-                    AND gs.duty_date = %s
+                LEFT JOIN guards pg
+                    ON pg.guard_id = ds.planned_guard_id
+                LEFT JOIN guards ag
+                    ON ag.guard_id = ds.actual_guard_id
                 WHERE a.is_active = TRUE
-                AND p.is_active = TRUE
+                  AND p.is_active = TRUE
                 ORDER BY s.shift_id, p.post_id
-                """,
-                (selected_date, selected_date)
-            )
-
+            """, (selected_date,))
             roster_rows = cursor.fetchall()
 
-            # Load only active guards who are not on Rest or Leave
-            cursor.execute(
-                """
-                SELECT g.guard_id, g.guard_name
+            cursor.execute("""
+                SELECT
+                    g.guard_id,
+                    g.guard_name,
+                    g.is_active,
+                    gs.status AS day_status
                 FROM guards g
-                WHERE g.is_active = TRUE
-                AND NOT EXISTS (
-                    SELECT 1
-                    FROM guard_day_status gs
-                    WHERE gs.guard_id = g.guard_id
+                LEFT JOIN guard_day_status gs
+                    ON gs.guard_id = g.guard_id
                     AND gs.duty_date = %s
-                )
-                ORDER BY g.guard_name
-                """,
-                (selected_date,)
+            """, (selected_date,))
+            guards = sorted(
+                cursor.fetchall(),
+                key=natural_guard_sort_key
             )
-
-            active_guards = cursor.fetchall()
 
     finally:
         connection.close()
@@ -464,9 +592,10 @@ def roster():
     return render_template(
         "roster.html",
         roster_rows=roster_rows,
-        active_guards=active_guards,
+        guards=guards,
         selected_date=selected_date
     )
+
 
 
 # Logout
@@ -477,139 +606,13 @@ def logout():
     return redirect(url_for("login"))
 
 
+
+# Old attendance URL redirects to the combined duty entry page.
 @app.route("/attendance", methods=["GET", "POST"])
 @login_required
 def attendance():
+    return redirect(url_for("roster"))
 
-    connection = get_db_connection()
-    cursor = connection.cursor()
-
-    try:
-        selected_date = request.values.get("duty_date") or date.today().isoformat()
-
-        # Only Admin and Supervisor can update attendance
-        if request.method == "POST":
-
-            if current_user.role not in ["ADMIN", "SUPERVISOR"]:
-                flash("You do not have permission to update attendance.")
-                return redirect(url_for("attendance", duty_date=selected_date))
-
-            slot_id = request.form.get("slot_id")
-            status = request.form.get("actual_status")
-            actual_guard_id = request.form.get("actual_guard_id") or None
-
-            allowed_statuses = [
-                "PENDING", "PRESENT", "ABSENT",
-                "REST", "LEAVE", "CANCELLED", "REPLACED"
-            ]
-
-            if status not in allowed_statuses:
-                flash("Invalid attendance status.")
-                return redirect(url_for("attendance", duty_date=selected_date))
-
-            # Find the duty slot and its planned guard
-            cursor.execute("""
-                SELECT slot_id, duty_date, shift_id, planned_guard_id
-                FROM duty_slots
-                WHERE slot_id = %s AND duty_date = %s
-            """, (slot_id, selected_date))
-
-            slot = cursor.fetchone()
-
-            if not slot:
-                flash("Duty slot not found.")
-                return redirect(url_for("attendance", duty_date=selected_date))
-
-            planned_guard_id = slot["planned_guard_id"]
-
-            # Present means the planned guard attended
-            if status == "PRESENT":
-                if not planned_guard_id:
-                    flash("Assign a planned guard before marking Present.")
-                    return redirect(url_for("attendance", duty_date=selected_date))
-
-                actual_guard_id = planned_guard_id
-
-            # Replaced requires a different substitute guard
-            elif status == "REPLACED":
-                if not planned_guard_id or not actual_guard_id:
-                    flash("Select a replacement guard and ensure a planned guard is assigned.")
-                    return redirect(url_for("attendance", duty_date=selected_date))
-
-                if actual_guard_id == planned_guard_id:
-                    flash("Replacement guard must be different from the planned guard.")
-                    return redirect(url_for("attendance", duty_date=selected_date))
-
-                cursor.execute(
-                    "SELECT guard_id FROM guards WHERE guard_id = %s",
-                    (actual_guard_id,)
-                )
-
-                if not cursor.fetchone():
-                    flash("Selected replacement guard does not exist.")
-                    return redirect(url_for("attendance", duty_date=selected_date))
-
-            # These statuses do not have an actual guard
-            else:
-                actual_guard_id = None
-
-            try:
-                cursor.execute("""
-                    UPDATE duty_slots
-                    SET actual_status = %s,
-                        actual_guard_id = %s
-                    WHERE slot_id = %s
-                """, (status, actual_guard_id, slot_id))
-
-                connection.commit()
-                flash("Attendance saved successfully.")
-
-            except pymysql.err.IntegrityError:
-                connection.rollback()
-                flash("This guard is already assigned to another post in the same shift.")
-
-            return redirect(url_for("attendance", duty_date=selected_date))
-
-        # Load attendance records for the selected date
-        cursor.execute("""
-            SELECT
-                ds.slot_id,
-                ds.duty_date,
-                ds.actual_status,
-                ds.actual_guard_id,
-                s.shift_name,
-                p.post_code,
-                ds.planned_guard_id,
-                pg.guard_name AS planned_guard_name
-            FROM duty_slots ds
-            JOIN shifts s ON ds.shift_id = s.shift_id
-            JOIN posts p ON ds.post_id = p.post_id
-            LEFT JOIN guards pg ON ds.planned_guard_id = pg.guard_id
-            WHERE ds.duty_date = %s
-            ORDER BY s.shift_id, p.post_code
-        """, (selected_date,))
-
-        slots = cursor.fetchall()
-
-        # Load all guards, including inactive guards for historical records
-        cursor.execute("""
-            SELECT guard_id, guard_name, is_active
-            FROM guards
-            ORDER BY guard_name
-        """)
-
-        guards = cursor.fetchall()
-
-        return render_template(
-            "attendance.html",
-            slots=slots,
-            guards=guards,
-            selected_date=selected_date
-        )
-
-    finally:
-        cursor.close()
-        connection.close()
 
 @app.route("/availability", methods=["GET", "POST"])
 @login_required
@@ -688,10 +691,11 @@ def availability():
             LEFT JOIN guard_day_status gs
                 ON g.guard_id = gs.guard_id
                 AND gs.duty_date = %s
-            ORDER BY g.guard_name
+            WHERE g.is_active = TRUE
         """, (selected_date,))
 
         guards = cursor.fetchall()
+        guards = sorted(guards, key=natural_guard_sort_key)
 
         return render_template(
             "availability.html",
@@ -770,6 +774,103 @@ def manage_users():
 
     finally:
         connection.close()
+
+# Duty Analytics
+@app.route("/analytics", methods=["GET"])
+@login_required
+def analytics():
+
+    today = date.today()
+    default_start = today.replace(day=1)
+
+    start_date = request.args.get(
+        "start_date", default_start.isoformat()
+    )
+    end_date = request.args.get(
+        "end_date", today.isoformat()
+    )
+
+    # Validate selected dates
+    try:
+        start = date.fromisoformat(start_date)
+        end = date.fromisoformat(end_date)
+
+        if start > end:
+            raise ValueError
+
+    except ValueError:
+        flash("Invalid date range selected.", "error")
+        start = default_start
+        end = today
+        start_date = start.isoformat()
+        end_date = end.isoformat()
+
+    connection = get_db_connection()
+
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                SELECT
+                    g.guard_id,
+                    g.guard_name,
+
+                    SUM(
+                        CASE
+                            WHEN s.shift_name IN ('Shift 1', 'Shift 2')
+                            THEN 1 ELSE 0
+                        END
+                    ) AS day_duties,
+
+                    SUM(
+                        CASE
+                            WHEN s.shift_name = 'Shift 3'
+                            THEN 1 ELSE 0
+                        END
+                    ) AS night_duties,
+
+                    COUNT(ds.slot_id) AS total_duties
+
+                FROM guards g
+
+                LEFT JOIN duty_slots ds
+                    ON ds.actual_guard_id = g.guard_id
+                    AND ds.duty_date BETWEEN %s AND %s
+                    AND ds.actual_status IN ('PRESENT', 'REPLACED')
+
+                LEFT JOIN shifts s
+                    ON s.shift_id = ds.shift_id
+
+                GROUP BY g.guard_id, g.guard_name
+
+                ORDER BY total_duties DESC, g.guard_name
+            """, (start_date, end_date))
+
+            guard_stats = cursor.fetchall()
+
+    finally:
+        connection.close()
+
+    total_day = sum(
+        int(row["day_duties"] or 0) for row in guard_stats
+    )
+
+    total_night = sum(
+        int(row["night_duties"] or 0) for row in guard_stats
+    )
+
+    total_duties = sum(
+        int(row["total_duties"] or 0) for row in guard_stats
+    )
+
+    return render_template(
+        "analytics.html",
+        guard_stats=guard_stats,
+        start_date=start_date,
+        end_date=end_date,
+        total_day=total_day,
+        total_night=total_night,
+        total_duties=total_duties
+    )
 
 if __name__ == "__main__":
     app.run(debug=False)

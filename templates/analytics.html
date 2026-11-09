@@ -1,0 +1,204 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GDMS | Duty Analytics</title>
+
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #eef2f7;
+            color: #183153;
+        }
+
+        header {
+            background: #183153;
+            color: white;
+            padding: 20px 30px;
+        }
+
+        main {
+            padding: 25px;
+            max-width: 1100px;
+            margin: auto;
+        }
+
+        .panel {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        .filters {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            align-items: end;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 6px;
+        }
+
+        input, button {
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+        }
+
+        button {
+            background: #183153;
+            color: white;
+            cursor: pointer;
+        }
+
+        .cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 15px;
+        }
+
+        .card {
+            background: #f4f7fb;
+            padding: 20px;
+            border-radius: 8px;
+        }
+
+        .number {
+            font-size: 30px;
+            font-weight: bold;
+            margin: 8px 0;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 12px;
+            border-bottom: 1px solid #ddd;
+            text-align: left;
+        }
+
+        th {
+            background: #f4f7fb;
+        }
+
+        .table-wrap {
+            overflow-x: auto;
+        }
+
+        a {
+            color: #183153;
+        }
+
+        @media (max-width: 600px) {
+            main {
+                padding: 12px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+<header>
+    <h2>Duty Analytics</h2>
+</header>
+
+<main>
+
+    <p><a href="{{ url_for('dashboard') }}">← Back to Dashboard</a></p>
+
+    <div class="panel">
+        <h3>Select Report Period</h3>
+
+        <form method="GET" class="filters">
+
+            <div>
+                <label>Start Date</label>
+                <input type="date" name="start_date"
+                       value="{{ start_date }}" required>
+            </div>
+
+            <div>
+                <label>End Date</label>
+                <input type="date" name="end_date"
+                       value="{{ end_date }}" required>
+            </div>
+
+            <button type="submit">Generate Report</button>
+
+        </form>
+    </div>
+
+    <div class="panel">
+        <h3>Overall Duty Summary</h3>
+
+        <div class="cards">
+
+            <div class="card">
+                <div>Day Duties</div>
+                <div class="number">{{ total_day }}</div>
+                <small>Shift 1 + Shift 2</small>
+            </div>
+
+            <div class="card">
+                <div>Night Duties</div>
+                <div class="number">{{ total_night }}</div>
+                <small>Shift 3</small>
+            </div>
+
+            <div class="card">
+                <div>Total Duties</div>
+                <div class="number">{{ total_duties }}</div>
+                <small>Actually performed</small>
+            </div>
+
+        </div>
+    </div>
+
+    <div class="panel">
+        <h3>Guard-wise Duty Report</h3>
+
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Guard ID</th>
+                        <th>Guard Name</th>
+                        <th>Day Duties</th>
+                        <th>Night Duties</th>
+                        <th>Total Duties</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    {% for guard in guard_stats %}
+                    <tr>
+                        <td>{{ guard.guard_id }}</td>
+                        <td>{{ guard.guard_name }}</td>
+                        <td>{{ guard.day_duties or 0 }}</td>
+                        <td>{{ guard.night_duties or 0 }}</td>
+                        <td><strong>{{ guard.total_duties or 0 }}</strong></td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="5">No guard records found.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</main>
+
+</body>
+</html>

@@ -1,196 +1,332 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GDMS | Guard Management</title>
-
+    <title>GDMS | Manage Guards</title>
     <style>
-        body {
-            margin: 0;
-            padding: 25px;
-            font-family: Arial, sans-serif;
-            background: #eef2f7;
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        :root {
+            --navy: #142b49; --navy-light: #1d426d; --blue: #2563eb;
+            --blue-soft: #edf3ff; --bg: #f4f7fc; --text: #1e293b;
+            --muted: #718096; --border: #e6ebf2; --white: #fff;
+            --green: #15803d; --green-soft: #dcfce7;
+            --red: #b42318; --red-soft: #fee2e2;
         }
-
-        .container {
-            max-width: 950px;
-            margin: auto;
+        body { font-family: "Segoe UI", Arial, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+        .layout { display: flex; min-height: 100vh; }
+        .sidebar {
+            width: 260px; background: var(--navy); color: white; padding: 27px 17px 20px;
+            display: flex; flex-direction: column; flex-shrink: 0;
         }
-
-        .panel {
-            background: white;
-            padding: 25px;
-            margin-bottom: 20px;
-            border-radius: 10px;
+        .brand { padding: 5px 12px 27px; border-bottom: 1px solid rgba(255,255,255,.12); }
+        .brand-top { display: flex; align-items: center; gap: 11px; }
+        .brand-icon {
+            width: 42px; height: 42px; background: rgba(255,255,255,.12); border-radius: 12px;
+            display: flex; align-items: center; justify-content: center; font-size: 22px;
         }
-
+        .brand h2 { font-size: 23px; letter-spacing: 1.5px; }
+        .brand p { margin-top: 12px; color: #aabbd0; font-size: 11px; line-height: 1.5; }
+        .nav-title { color: #849bb7; font-size: 10px; font-weight: 700; letter-spacing: 1.5px; padding: 28px 12px 11px; }
+        nav { display: flex; flex-direction: column; gap: 5px; }
+        .nav-link {
+            display: flex; align-items: center; gap: 13px; padding: 12px 13px; border-radius: 9px;
+            text-decoration: none; color: #d0dbea; font-size: 13px; transition: .2s;
+        }
+        .nav-link:hover { background: rgba(255,255,255,.09); color: white; }
+        .nav-link.active { background: var(--blue); color: white; box-shadow: 0 5px 14px rgba(0,0,0,.15); }
+        .nav-icon { width: 22px; text-align: center; font-size: 17px; }
+        .sidebar-bottom { margin-top: auto; padding-top: 20px; border-top: 1px solid rgba(255,255,255,.12); }
+        .user-mini { display: flex; align-items: center; gap: 11px; padding: 8px 10px 16px; }
+        .user-avatar {
+            width: 37px; height: 37px; border-radius: 50%; background: #31547d;
+            display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 15px;
+        }
+        .user-info strong { display: block; font-size: 13px; overflow-wrap: anywhere; }
+        .user-info span { display: block; color: #aabbd0; font-size: 11px; margin-top: 4px; }
+        .logout-btn {
+            width: 100%; padding: 11px; background: rgba(255,255,255,.09); color: white;
+            border: 1px solid rgba(255,255,255,.08); border-radius: 8px; cursor: pointer; font-size: 13px;
+        }
+        .logout-btn:hover { background: #b42318; }
+        .main { flex: 1; min-width: 0; }
+        .topbar {
+            background: white; min-height: 82px; padding: 18px 36px; border-bottom: 1px solid var(--border);
+            display: flex; align-items: center; justify-content: space-between; gap: 15px;
+        }
+        .topbar h2 { font-size: 20px; color: var(--navy); }
+        .topbar p { margin-top: 5px; color: var(--muted); font-size: 12px; }
+        .role-badge { background: var(--blue-soft); color: #2457b8; padding: 8px 15px; border-radius: 20px; font-size: 11px; font-weight: 700; white-space: nowrap; }
+        .content { width: 100%; max-width: 1450px; padding: 32px 36px; margin: auto; }
+        .page-heading { display: flex; justify-content: space-between; align-items: flex-end; gap: 18px; margin-bottom: 25px; }
+        .eyebrow { color: var(--blue); text-transform: uppercase; letter-spacing: 1.5px; font-size: 10px; font-weight: 800; margin-bottom: 8px; }
+        .page-heading h1 { color: var(--navy); font-size: 27px; margin-bottom: 7px; }
+        .page-heading p { color: var(--muted); font-size: 13px; line-height: 1.6; }
+        .stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin-bottom: 22px; }
+        .stat-card { background: white; border: 1px solid var(--border); border-radius: 13px; padding: 18px 20px; box-shadow: 0 3px 12px rgba(20,43,73,.03); }
+        .stat-label { color: var(--muted); font-size: 12px; font-weight: 600; }
+        .stat-value { color: var(--navy); font-size: 27px; font-weight: 750; margin-top: 8px; }
+        .panel { background: white; border: 1px solid var(--border); border-radius: 14px; padding: 23px; margin-bottom: 22px; box-shadow: 0 4px 15px rgba(20,43,73,.035); }
+        .panel-head { display: flex; align-items: center; justify-content: space-between; gap: 15px; margin-bottom: 18px; }
+        .panel-head h2 { color: var(--navy); font-size: 17px; }
+        .panel-head p { color: var(--muted); font-size: 12px; margin-top: 5px; }
+        .add-form { display: grid; grid-template-columns: minmax(160px, .8fr) minmax(220px, 1.3fr) auto; gap: 12px; align-items: end; }
+        .field label { display: block; font-size: 11px; color: #526174; font-weight: 700; margin: 0 0 7px 2px; }
         input {
-            padding: 11px;
-            margin: 8px 5px 8px 0;
-            border: 1px solid #ccc;
-            border-radius: 5px;
+            width: 100%; min-width: 0; padding: 11px 12px; border: 1px solid #d7dfeb; border-radius: 8px;
+            font: inherit; font-size: 13px; color: var(--text); background: white; outline: none;
         }
-
-        button {
-            padding: 11px 20px;
-            background: #183153;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
+        input:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(37,99,235,.10); }
+        button { font: inherit; cursor: pointer; }
+        .btn { border: 0; border-radius: 8px; padding: 11px 16px; font-size: 12px; font-weight: 700; transition: .18s; }
+        .btn-primary { color: white; background: var(--blue); }
+        .btn-primary:hover { background: #1d4ed8; }
+        .btn-light { color: #2457b8; background: var(--blue-soft); }
+        .btn-light:hover { background: #dce8ff; }
+        .btn-danger { color: var(--red); background: var(--red-soft); }
+        .btn-danger:hover { background: #fecaca; }
+        .btn-success { color: var(--green); background: var(--green-soft); }
+        .btn-success:hover { background: #bbf7d0; }
+        .toolbar { display: flex; justify-content: space-between; align-items: center; gap: 14px; margin-bottom: 15px; }
+        .search { max-width: 310px; }
+        .count-label { color: var(--muted); font-size: 12px; white-space: nowrap; }
+        .table-wrap { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; min-width: 650px; }
+        th { text-align: left; color: #64748b; background: #f8faff; padding: 12px 14px; font-size: 10px; text-transform: uppercase; letter-spacing: .8px; border-bottom: 1px solid var(--border); }
+        td { padding: 13px 14px; border-bottom: 1px solid #edf0f5; font-size: 13px; vertical-align: middle; }
+        tbody tr:hover { background: #fbfcff; }
+        tbody tr:last-child td { border-bottom: 0; }
+        .guard-id { color: var(--navy); font-weight: 750; letter-spacing: .2px; }
+        .name-form { display: flex; align-items: center; gap: 8px; min-width: 230px; }
+        .name-form input { max-width: 260px; padding: 8px 10px; }
+        .status { display: inline-flex; align-items: center; gap: 7px; padding: 6px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; }
+        .status::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+        .status-active { color: var(--green); background: var(--green-soft); }
+        .status-inactive { color: #64748b; background: #eef2f6; }
+        .action-cell { white-space: nowrap; }
+        .empty { text-align: center; color: var(--muted); padding: 35px 15px; }
+        .flash { padding: 12px 15px; border-radius: 9px; margin-bottom: 14px; font-size: 13px; }
+        .flash.success { color: #166534; background: #dcfce7; border: 1px solid #bbf7d0; }
+        .flash.error { color: #991b1b; background: #fee2e2; border: 1px solid #fecaca; }
+        .flash.warning { color: #92400e; background: #fef3c7; border: 1px solid #fde68a; }
+        .helper { color: var(--muted); font-size: 11px; margin-top: 10px; line-height: 1.5; }
+        @media (max-width: 1000px) { .sidebar { width: 225px; } .content { padding: 26px 22px; } .topbar { padding: 17px 22px; } }
+        @media (max-width: 760px) {
+            .layout { display: block; }
+            .sidebar { width: 100%; padding: 15px; }
+            .brand { padding: 3px 5px 13px; }
+            .brand p, .nav-title, .sidebar-bottom { display: none; }
+            nav { flex-direction: row; overflow-x: auto; padding-top: 12px; }
+            .nav-link { flex: 0 0 auto; padding: 10px; font-size: 11px; }
+            .nav-icon { display: none; }
+            .topbar { min-height: 66px; padding: 14px 17px; }
+            .content { padding: 22px 14px; }
+            .page-heading { align-items: flex-start; flex-direction: column; }
+            .stats { gap: 9px; }
+            .stat-card { padding: 13px; }
+            .stat-value { font-size: 22px; }
+            .add-form { grid-template-columns: 1fr; }
+            .add-form .btn { width: 100%; }
+            .panel { padding: 17px 14px; }
+            .toolbar { align-items: stretch; flex-direction: column; }
+            .search { max-width: none; }
         }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        th, td {
-            padding: 13px;
-            border-bottom: 1px solid #ddd;
-            text-align: left;
-        }
-
-        th {
-            background: #183153;
-            color: white;
-        }
-
-        .success {
-            color: green;
-        }
-
-        .error {
-            color: red;
-        }
-
-        a {
-            color: #183153;
-        }
+        @media (max-width: 420px) { .stats { grid-template-columns: 1fr; } .role-badge { padding: 7px 9px; } }
     </style>
 </head>
-
 <body>
-<div class="container">
+<div class="layout">
+    <aside class="sidebar">
+        <div class="brand">
+            <div class="brand-top">
+                <div class="brand-icon">🛡️</div>
+                <h2>GDMS</h2>
+            </div>
+            <p>GUARD DUTY MANAGEMENT SYSTEM</p>
+        </div>
 
-    <h1>Guard Management</h1>
-    <p><a href="{{ url_for('dashboard') }}">← Back to Dashboard</a></p>
+        <div class="nav-title">MAIN MENU</div>
+        <nav>
+            <a class="nav-link" href="{{ url_for('dashboard') }}"><span class="nav-icon">⌂</span>Dashboard</a>
+            <a class="nav-link active" href="{{ url_for('guards') }}"><span class="nav-icon">♙</span>Manage Guards</a>
+            <a class="nav-link" href="{{ url_for('roster') }}"><span class="nav-icon">▦</span>Daily Duty Entry</a>
+            <a class="nav-link" href="{{ url_for('availability') }}"><span class="nav-icon">◷</span>Rest &amp; Leave Management</a>
+            <a class="nav-link" href="{{ url_for('analytics') }}"><span class="nav-icon">▥</span>Duty Analytics</a>
+            {% if current_user.role == 'ADMIN' %}
+            <a class="nav-link" href="{{ url_for('manage_users') }}"><span class="nav-icon">♧</span>Manage Users</a>
+            {% endif %}
+        </nav>
 
-    {% with messages = get_flashed_messages(with_categories=true) %}
-        {% for category, message in messages %}
-            <p class="{{ category }}">{{ message }}</p>
-        {% endfor %}
-    {% endwith %}
-
-    {% if current_user.role in ['ADMIN', 'SUPERVISOR'] %}
-    <div class="panel">
-        <h2>Add New Guard</h2>
-
-        <form method="POST">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-
-            <input
-                type="text"
-                name="guard_id"
-                placeholder="Enter Guard ID"
-                maxlength="30"
-                required
-            >
-
-            <input
-                type="text"
-                name="guard_name"
-                placeholder="Enter Guard Name"
-                maxlength="100"
-                required
-            >
-
-            <button type="submit">Add Guard</button>
-        </form>
-    </div>
-    {% endif %}
-
-    <div class="panel">
-        <h2>Registered Guards</h2>
-
-        <table>
-           <thead>
-    <tr>
-        <th>Guard ID</th>
-        <th>Guard Name</th>
-        <th>Status</th>
-        <th>Actions</th>
-    </tr>
-</thead>
-
-            
-<tbody>
-    {% for guard in guards %}
-    <tr>
-        <td>{{ guard.guard_id }}</td>
-
-        <td>
-            {% if current_user.role in ['ADMIN', 'SUPERVISOR'] %}
-            <form method="POST"
-                  action="{{ url_for('edit_guard', guard_id=guard.guard_id) }}">
-
-                <input type="hidden"
-                       name="csrf_token"
-                       value="{{ csrf_token() }}">
-
-                <input type="text"
-                       name="guard_name"
-                       value="{{ guard.guard_name }}"
-                       maxlength="100"
-                       required>
-
-                <button type="submit">Save</button>
+        <div class="sidebar-bottom">
+            <div class="user-mini">
+                <div class="user-avatar">{{ current_user.username[:1]|upper }}</div>
+                <div class="user-info">
+                    <strong>{{ current_user.username }}</strong>
+                    <span>{{ current_user.role|title }}</span>
+                </div>
+            </div>
+            <form method="POST" action="{{ url_for('logout') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button class="logout-btn" type="submit">↪ &nbsp; Logout</button>
             </form>
-            {% else %}
-                {{ guard.guard_name }}
-            {% endif %}
-        </td>
+        </div>
+    </aside>
 
-        <td>
-            {% if guard.is_active %}
-                Active
-            {% else %}
-                Inactive
-            {% endif %}
-        </td>
+    <main class="main">
+        <header class="topbar">
+            <div>
+                <h2>Guard Management</h2>
+                <p>Maintain your guard register and account status</p>
+            </div>
+            <span class="role-badge">{{ current_user.role|replace('_', ' ') }}</span>
+        </header>
 
-        <td>
+        <div class="content">
+            <section class="page-heading">
+                <div>
+                    <div class="eyebrow">Personnel administration</div>
+                    <h1>Manage Guards</h1>
+                    <p>Add guards, update their names and manage their active status.<br>
+                       Guard IDs are displayed in natural order, so G2 appears before G10.</p>
+                </div>
+            </section>
+
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% for category, message in messages %}
+                    <div class="flash {{ category }}">{{ message }}</div>
+                {% endfor %}
+            {% endwith %}
+
+            {% set active_count = guards|selectattr('is_active')|list|length %}
+            {% set total_count = guards|length %}
+            <section class="stats">
+                <div class="stat-card">
+                    <div class="stat-label">Total registered guards</div>
+                    <div class="stat-value">{{ total_count }}</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Active guards</div>
+                    <div class="stat-value">{{ active_count }}</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Inactive guards</div>
+                    <div class="stat-value">{{ total_count - active_count }}</div>
+                </div>
+            </section>
+
             {% if current_user.role in ['ADMIN', 'SUPERVISOR'] %}
-            <form method="POST"
-                  action="{{ url_for('toggle_guard', guard_id=guard.guard_id) }}">
-
-                <input type="hidden"
-                       name="csrf_token"
-                       value="{{ csrf_token() }}">
-
-                {% if guard.is_active %}
-                    <button type="submit">Deactivate</button>
-                {% else %}
-                    <button type="submit">Activate</button>
-                {% endif %}
-            </form>
-            {% else %}
-                Read only
+            <section class="panel">
+                <div class="panel-head">
+                    <div>
+                        <h2>Add a new guard</h2>
+                        <p>Enter a unique Guard ID and the guard's name.</p>
+                    </div>
+                </div>
+                <form method="POST" class="add-form">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="field">
+                        <label for="guard_id">GUARD ID</label>
+                        <input id="guard_id" type="text" name="guard_id" placeholder="e.g. G01" maxlength="30" required>
+                    </div>
+                    <div class="field">
+                        <label for="guard_name">GUARD NAME</label>
+                        <input id="guard_name" type="text" name="guard_name" placeholder="Enter full name" maxlength="100" required>
+                    </div>
+                    <button class="btn btn-primary" type="submit">＋ Add Guard</button>
+                </form>
+                <p class="helper">New guards are created as Active by default, according to the database's existing default setting.</p>
+            </section>
             {% endif %}
-        </td>
-    </tr>
-    {% else %}
-    <tr>
-        <td colspan="4">No guards registered yet.</td>
-    </tr>
-    {% endfor %}
-</tbody>
 
-        </table>
-    </div>
+            <section class="panel">
+                <div class="panel-head">
+                    <div>
+                        <h2>Registered guards</h2>
+                        <p>Guard IDs are sorted naturally in ascending order.</p>
+                    </div>
+                </div>
 
+                <div class="toolbar">
+                    <input class="search" id="guardSearch" type="search" placeholder="Search by Guard ID or name..." aria-label="Search guards">
+                    <span class="count-label" id="visibleCount">{{ total_count }} guard(s)</span>
+                </div>
+
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Guard ID</th>
+                                <th>Guard name</th>
+                                <th>Status</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="guardTable">
+                        {% for guard in guards %}
+                            <tr class="guard-row">
+                                <td><span class="guard-id">{{ guard.guard_id }}</span></td>
+                                <td>
+                                    {% if current_user.role in ['ADMIN', 'SUPERVISOR'] %}
+                                    <form class="name-form" method="POST" action="{{ url_for('edit_guard', guard_id=guard.guard_id) }}">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <input type="text" name="guard_name" value="{{ guard.guard_name }}" maxlength="100" aria-label="Name for {{ guard.guard_id }}" required>
+                                        <button class="btn btn-light" type="submit">Save</button>
+                                    </form>
+                                    {% else %}
+                                        {{ guard.guard_name }}
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if guard.is_active %}
+                                        <span class="status status-active">Active</span>
+                                    {% else %}
+                                        <span class="status status-inactive">Inactive</span>
+                                    {% endif %}
+                                </td>
+                                <td class="action-cell">
+                                    {% if current_user.role in ['ADMIN', 'SUPERVISOR'] %}
+                                    <form method="POST" action="{{ url_for('toggle_guard', guard_id=guard.guard_id) }}" onsubmit="return confirm('Change the status of {{ guard.guard_id }}?');">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        {% if guard.is_active %}
+                                            <button class="btn btn-danger" type="submit">Deactivate</button>
+                                        {% else %}
+                                            <button class="btn btn-success" type="submit">Activate</button>
+                                        {% endif %}
+                                    </form>
+                                    {% else %}
+                                        <span class="count-label">Read only</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% else %}
+                            <tr><td class="empty" colspan="4">No guards have been registered yet.</td></tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                <p class="helper">Deactivating a guard does not delete their previous duty records.</p>
+            </section>
+        </div>
+    </main>
 </div>
+
+<script>
+    const searchInput = document.getElementById("guardSearch");
+    const guardRows = Array.from(document.querySelectorAll(".guard-row"));
+    const visibleCount = document.getElementById("visibleCount");
+
+    searchInput.addEventListener("input", function () {
+        const query = this.value.trim().toLowerCase();
+        let visible = 0;
+
+        guardRows.forEach(row => {
+            const matches = row.textContent.toLowerCase().includes(query);
+            row.style.display = matches ? "" : "none";
+            if (matches) visible++;
+        });
+
+        visibleCount.textContent = visible + " guard(s)";
+    });
+</script>
 </body>
 </html>

@@ -1,284 +1,388 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GDMS | Daily Duty Roster</title>
-
+    <title>GDMS | Daily Duty Entry</title>
     <style>
-        body {
-            margin: 0;
-            padding: 25px;
-            font-family: Arial, sans-serif;
-            background: #eef2f7;
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        :root {
+            --navy: #142b49; --blue: #2563eb; --blue-soft: #edf3ff;
+            --bg: #f4f7fc; --text: #1e293b; --muted: #718096;
+            --border: #e6ebf2; --white: #fff; --green: #15803d;
+            --green-soft: #dcfce7; --amber: #92400e; --amber-soft: #fef3c7;
+            --red: #b42318; --red-soft: #fee2e2;
         }
-
-        .container {
-            max-width: 1100px;
-            margin: auto;
-        }
-
-        .panel {
-            background: white;
-            padding: 22px;
-            margin-bottom: 20px;
-            border-radius: 10px;
-            overflow-x: auto;
-        }
-
-        input, select, button {
-            padding: 10px;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-        }
-
-        button {
-            background: #183153;
-            color: white;
-            border: none;
-            cursor: pointer;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            min-width: 750px;
-        }
-
-        th, td {
-            padding: 12px;
-            border-bottom: 1px solid #ddd;
-            text-align: left;
-        }
-
-        th {
-            background: #183153;
-            color: white;
-        }
-
-        .success {
-            color: green;
-        }
-
-        .error {
-            color: red;
-        }
-
-        a {
-            color: #183153;
-        }
-
-        .assignment-form {
-            display: flex;
-            gap: 7px;
-            flex-wrap: wrap;
-        }
-
-        .status-warning {
-            display: inline-block;
-            color: #b45309;
-            background: #fef3c7;
-            padding: 5px 8px;
-            border-radius: 5px;
-            font-size: 12px;
-            margin-top: 6px;
-        }
-
-        .inactive-warning {
-            display: inline-block;
-            color: #b91c1c;
-            background: #fee2e2;
-            padding: 5px 8px;
-            border-radius: 5px;
-            font-size: 12px;
-            margin-top: 6px;
+        body { font-family: "Segoe UI", Arial, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+        .layout { display: flex; min-height: 100vh; }
+        .sidebar { width: 260px; background: var(--navy); color: white; padding: 27px 17px 20px; display: flex; flex-direction: column; flex-shrink: 0; }
+        .brand { padding: 5px 12px 27px; border-bottom: 1px solid rgba(255,255,255,.12); }
+        .brand-top { display: flex; align-items: center; gap: 11px; }
+        .brand-icon { width: 42px; height: 42px; background: rgba(255,255,255,.12); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 22px; }
+        .brand h2 { font-size: 23px; letter-spacing: 1.5px; }
+        .brand p { margin-top: 12px; color: #aabbd0; font-size: 11px; line-height: 1.5; }
+        .nav-title { color: #849bb7; font-size: 10px; font-weight: 700; letter-spacing: 1.5px; padding: 28px 12px 11px; }
+        nav { display: flex; flex-direction: column; gap: 5px; }
+        .nav-link { display: flex; align-items: center; gap: 13px; padding: 12px 13px; border-radius: 9px; text-decoration: none; color: #d0dbea; font-size: 13px; transition: .2s; }
+        .nav-link:hover { background: rgba(255,255,255,.09); color: white; }
+        .nav-link.active { background: var(--blue); color: white; box-shadow: 0 5px 14px rgba(0,0,0,.15); }
+        .nav-icon { width: 22px; text-align: center; font-size: 17px; }
+        .sidebar-bottom { margin-top: auto; padding-top: 20px; border-top: 1px solid rgba(255,255,255,.12); }
+        .user-mini { display: flex; align-items: center; gap: 11px; padding: 8px 10px 16px; }
+        .user-avatar { width: 37px; height: 37px; border-radius: 50%; background: #31547d; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 15px; }
+        .user-info strong { display: block; font-size: 13px; overflow-wrap: anywhere; }
+        .user-info span { display: block; color: #aabbd0; font-size: 11px; margin-top: 4px; }
+        .logout-btn { width: 100%; padding: 11px; background: rgba(255,255,255,.09); color: white; border: 1px solid rgba(255,255,255,.08); border-radius: 8px; cursor: pointer; font-size: 13px; }
+        .logout-btn:hover { background: #b42318; }
+        .main { flex: 1; min-width: 0; }
+        .topbar { background: white; min-height: 82px; padding: 18px 36px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; gap: 15px; }
+        .topbar h2 { font-size: 20px; color: var(--navy); }
+        .topbar p { margin-top: 5px; color: var(--muted); font-size: 12px; }
+        .role-badge { background: var(--blue-soft); color: #2457b8; padding: 8px 15px; border-radius: 20px; font-size: 11px; font-weight: 700; white-space: nowrap; }
+        .content { width: 100%; max-width: 1550px; padding: 32px 36px; margin: auto; }
+        .page-heading { display: flex; justify-content: space-between; align-items: flex-end; gap: 18px; margin-bottom: 23px; }
+        .eyebrow { color: var(--blue); text-transform: uppercase; letter-spacing: 1.5px; font-size: 10px; font-weight: 800; margin-bottom: 8px; }
+        .page-heading h1 { color: var(--navy); font-size: 27px; margin-bottom: 7px; }
+        .page-heading p { color: var(--muted); font-size: 13px; line-height: 1.6; }
+        .panel { background: white; border: 1px solid var(--border); border-radius: 14px; padding: 23px; margin-bottom: 21px; box-shadow: 0 4px 15px rgba(20,43,73,.035); }
+        .panel-head { display: flex; align-items: center; justify-content: space-between; gap: 15px; margin-bottom: 17px; }
+        .panel-head h2 { color: var(--navy); font-size: 17px; }
+        .panel-head p { color: var(--muted); font-size: 12px; margin-top: 5px; line-height: 1.5; }
+        .date-row { display: flex; align-items: end; gap: 12px; flex-wrap: wrap; }
+        .field label { display: block; color: #526174; font-size: 11px; font-weight: 700; margin: 0 0 7px 2px; }
+        input[type="date"], select { font: inherit; font-size: 13px; color: var(--text); background: white; border: 1px solid #d7dfeb; border-radius: 8px; padding: 10px 11px; outline: none; }
+        input[type="date"]:focus, select:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(37,99,235,.10); }
+        .date-input { min-width: 190px; }
+        button { font: inherit; cursor: pointer; }
+        .btn { border: 0; border-radius: 8px; padding: 11px 16px; font-size: 12px; font-weight: 700; transition: .18s; }
+        .btn-primary { color: white; background: var(--blue); }
+        .btn-primary:hover { background: #1d4ed8; }
+        .date-meta { margin-left: auto; color: var(--muted); font-size: 12px; padding-bottom: 10px; }
+        .flash { padding: 12px 15px; border-radius: 9px; margin-bottom: 14px; font-size: 13px; line-height: 1.5; }
+        .flash.success { color: #166534; background: var(--green-soft); border: 1px solid #bbf7d0; }
+        .flash.error { color: #991b1b; background: var(--red-soft); border: 1px solid #fecaca; }
+        .flash.warning { color: var(--amber); background: var(--amber-soft); border: 1px solid #fde68a; }
+        .info-strip { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 12px; margin-bottom: 19px; }
+        .info-item { background: #f8faff; border: 1px solid #e8eef9; border-radius: 10px; padding: 13px 15px; }
+        .info-item strong { display: block; color: var(--navy); font-size: 14px; margin-bottom: 4px; }
+        .info-item span { color: var(--muted); font-size: 11px; line-height: 1.45; }
+        .table-top { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 14px; }
+        .slot-count { color: var(--muted); font-size: 12px; }
+        .table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 10px; }
+        table { width: 100%; min-width: 1120px; border-collapse: collapse; }
+        th { background: #f5f8fd; color: #64748b; text-align: left; padding: 13px 12px; font-size: 10px; text-transform: uppercase; letter-spacing: .7px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+        td { padding: 12px; border-bottom: 1px solid #edf0f5; vertical-align: middle; }
+        tbody tr:last-child td { border-bottom: 0; }
+        tbody tr:hover { background: #fbfcff; }
+        .shift-cell { min-width: 125px; }
+        .shift-name { display: block; color: var(--navy); font-weight: 750; font-size: 12px; }
+        .shift-time { display: block; color: var(--muted); font-size: 10px; margin-top: 5px; white-space: nowrap; }
+        .post-pill { display: inline-flex; min-width: 44px; justify-content: center; padding: 6px 9px; border-radius: 7px; background: var(--blue-soft); color: #2457b8; font-size: 11px; font-weight: 800; }
+        td select { width: 100%; min-width: 175px; }
+        td select:disabled { color: #64748b; background: #f1f5f9; cursor: not-allowed; }
+        .helper { color: var(--muted); font-size: 10px; margin-top: 5px; line-height: 1.4; }
+        .result-select { min-width: 145px; }
+        .night-note { display: block; color: #8b5cf6; font-size: 10px; margin-top: 4px; }
+        .save-footer { display: flex; justify-content: space-between; align-items: center; gap: 15px; flex-wrap: wrap; margin-top: 19px; }
+        .save-note { color: var(--muted); font-size: 11px; line-height: 1.5; max-width: 620px; }
+        .save-button { padding: 13px 23px; font-size: 13px; }
+        .empty-state { padding: 30px; text-align: center; color: var(--muted); font-size: 13px; }
+        .readonly-note { background: #f8fafc; color: #526174; border: 1px solid var(--border); padding: 12px 14px; border-radius: 9px; font-size: 12px; margin-bottom: 16px; }
+        @media (max-width: 1000px) { .sidebar { width: 225px; } .content { padding: 26px 22px; } .topbar { padding: 17px 22px; } }
+        @media (max-width: 760px) {
+            .layout { display: block; }
+            .sidebar { width: 100%; padding: 15px; }
+            .brand { padding: 3px 5px 13px; }
+            .brand p, .nav-title, .sidebar-bottom { display: none; }
+            nav { flex-direction: row; overflow-x: auto; padding-top: 12px; }
+            .nav-link { flex: 0 0 auto; padding: 10px; font-size: 11px; }
+            .nav-icon { display: none; }
+            .topbar { min-height: 66px; padding: 14px 17px; }
+            .content { padding: 22px 14px; }
+            .page-heading { align-items: flex-start; flex-direction: column; }
+            .panel { padding: 17px 14px; }
+            .info-strip { grid-template-columns: 1fr; gap: 8px; }
+            .date-meta { margin-left: 0; width: 100%; }
+            .save-footer { align-items: stretch; flex-direction: column; }
+            .save-button { width: 100%; }
         }
     </style>
 </head>
-
 <body>
-<div class="container">
+<div class="layout">
+    <aside class="sidebar">
+        <div class="brand">
+            <div class="brand-top">
+                <div class="brand-icon">🛡️</div>
+                <h2>GDMS</h2>
+            </div>
+            <p>GUARD DUTY MANAGEMENT SYSTEM</p>
+        </div>
 
-    <h1>Daily Duty Roster</h1>
+        <div class="nav-title">MAIN MENU</div>
+        <nav>
+            <a class="nav-link" href="{{ url_for('dashboard') }}"><span class="nav-icon">⌂</span>Dashboard</a>
+            <a class="nav-link" href="{{ url_for('guards') }}"><span class="nav-icon">♙</span>Manage Guards</a>
+            <a class="nav-link active" href="{{ url_for('roster') }}"><span class="nav-icon">▦</span>Daily Duty Entry</a>
+            <a class="nav-link" href="{{ url_for('availability') }}"><span class="nav-icon">◷</span>Rest &amp; Leave Management</a>
+            <a class="nav-link" href="{{ url_for('analytics') }}"><span class="nav-icon">▥</span>Duty Analytics</a>
+            {% if current_user.role == 'ADMIN' %}
+            <a class="nav-link" href="{{ url_for('manage_users') }}"><span class="nav-icon">♧</span>Manage Users</a>
+            {% endif %}
+        </nav>
 
-    <p>
-        <a href="{{ url_for('dashboard') }}">← Back to Dashboard</a>
-    </p>
+        <div class="sidebar-bottom">
+            <div class="user-mini">
+                <div class="user-avatar">{{ current_user.username[:1]|upper }}</div>
+                <div class="user-info">
+                    <strong>{{ current_user.username }}</strong>
+                    <span>{{ current_user.role|title }}</span>
+                </div>
+            </div>
+            <form method="POST" action="{{ url_for('logout') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button class="logout-btn" type="submit">↪ &nbsp; Logout</button>
+            </form>
+        </div>
+    </aside>
 
-    {% with messages = get_flashed_messages(with_categories=true) %}
-        {% for category, message in messages %}
-            <p class="{{ category }}">{{ message }}</p>
-        {% endfor %}
-    {% endwith %}
+    <main class="main">
+        <header class="topbar">
+            <div>
+                <h2>Daily Duty Entry</h2>
+                <p>Record completed duties for the selected date</p>
+            </div>
+            <span class="role-badge">{{ current_user.role|replace('_', ' ') }}</span>
+        </header>
 
-    <div class="panel">
-        <h2>Select Duty Date</h2>
+        <div class="content">
+            <section class="page-heading">
+                <div>
+                    <div class="eyebrow">Daily operations</div>
+                    <h1>Daily Duty Entry</h1>
+                    <p>Record the original assignment, actual duty performer and duty result for all posts in one place.</p>
+                </div>
+            </section>
 
-        <form method="GET" action="{{ url_for('roster') }}">
-            <input type="date"
-                   name="date"
-                   value="{{ selected_date }}"
-                   required>
-
-            <button type="submit">View Roster</button>
-        </form>
-
-        <h3>Roster for {{ selected_date }}</h3>
-    </div>
-
-    <div class="panel">
-        <h2>Duty Assignments</h2>
-
-        <table>
-            <thead>
-                <tr>
-                    <th>Shift</th>
-                    <th>Timing</th>
-                    <th>Post</th>
-                    <th>Planned Guard</th>
-                    <th>Availability</th>
-                    <th>Action</th>
-                </tr>
-            </thead>
-
-            <tbody>
-
-                {% for item in roster_rows %}
-
-                <tr>
-
-                    <td>{{ item.shift_name }}</td>
-
-                    <td>
-                        {{ item.start_time }} – {{ item.end_time }}
-
-                        {% if item.shift_name == 'Shift 3' %}
-                            (Next day)
-                        {% endif %}
-                    </td>
-
-                    <td>{{ item.post_code }}</td>
-
-                    <td>
-                        {% if item.planned_guard_name %}
-                            {{ item.planned_guard_name }}
-                        {% else %}
-                            <span>Not assigned</span>
-                        {% endif %}
-                    </td>
-
-                    <td>
-
-                        {% if item.planned_guard_day_status %}
-
-                            <span class="status-warning">
-                                {{ item.planned_guard_day_status }}
-                            </span>
-
-                        {% elif item.planned_guard_id and not item.planned_guard_is_active %}
-
-                            <span class="inactive-warning">
-                                INACTIVE GUARD
-                            </span>
-
-                        {% elif item.planned_guard_id %}
-
-                            <span style="color:green;">
-                                Available
-                            </span>
-
-                        {% else %}
-
-                            <span>—</span>
-
-                        {% endif %}
-
-                    </td>
-
-                    <td>
-
-                        {% if current_user.role in ['ADMIN', 'SUPERVISOR'] %}
-
-                        <form class="assignment-form"
-                              method="POST"
-                              action="{{ url_for('roster') }}">
-
-                            <input type="hidden"
-                                   name="csrf_token"
-                                   value="{{ csrf_token() }}">
-
-                            <input type="hidden"
-                                   name="duty_date"
-                                   value="{{ selected_date }}">
-
-                            <input type="hidden"
-                                   name="shift_id"
-                                   value="{{ item.shift_id }}">
-
-                            <input type="hidden"
-                                   name="post_id"
-                                   value="{{ item.post_id }}">
-
-                            <select name="guard_id">
-
-                                <option value="">Unassign</option>
-
-                                <!-- Preserve an already assigned guard
-                                     if now on Rest/Leave or inactive -->
-                                {% if item.planned_guard_id and
-                                      (item.planned_guard_day_status or
-                                       not item.planned_guard_is_active) %}
-
-                                    <option value="{{ item.planned_guard_id }}" selected>
-                                        {{ item.planned_guard_name }}
-                                        (Already assigned)
-                                    </option>
-
-                                {% endif %}
-
-                                {% for guard in active_guards %}
-
-                                    <option value="{{ guard.guard_id }}"
-                                        {% if item.planned_guard_id == guard.guard_id %}
-                                            selected
-                                        {% endif %}>
-
-                                        {{ guard.guard_name }}
-                                        ({{ guard.guard_id }})
-
-                                    </option>
-
-                                {% endfor %}
-
-                            </select>
-
-                            <button type="submit">Save</button>
-
-                        </form>
-
-                        {% else %}
-
-                            Read only
-
-                        {% endif %}
-
-                    </td>
-
-                </tr>
-
-                {% else %}
-
-                <tr>
-                    <td colspan="6">No active duty posts found.</td>
-                </tr>
-
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% for category, message in messages %}
+                    <div class="flash {{ category }}">{{ message }}</div>
                 {% endfor %}
+            {% endwith %}
 
-            </tbody>
-        </table>
-    </div>
+            <section class="panel">
+                <div class="panel-head">
+                    <div>
+                        <h2>Select duty date</h2>
+                        <p>Choose the date on which the duty shift started. Shift 3 belongs to the date it starts at 21:00.</p>
+                    </div>
+                </div>
+                <form method="GET" action="{{ url_for('roster') }}" class="date-row">
+                    <div class="field">
+                        <label for="date">DUTY DATE</label>
+                        <input class="date-input" id="date" type="date" name="date" value="{{ selected_date }}" required>
+                    </div>
+                    <button class="btn btn-primary" type="submit">Load Duty Sheet</button>
+                    <div class="date-meta">Selected date: <strong>{{ selected_date }}</strong></div>
+                </form>
+            </section>
 
+            <section class="panel">
+                <div class="panel-head">
+                    <div>
+                        <h2>Duty sheet · {{ selected_date }}</h2>
+                        <p>All 15 configured post and shift combinations are listed below.</p>
+                    </div>
+                </div>
+
+                <div class="info-strip">
+                    <div class="info-item">
+                        <strong>Present</strong>
+                        <span>Actual guard is automatically the originally assigned guard.</span>
+                    </div>
+                    <div class="info-item">
+                        <strong>Replaced</strong>
+                        <span>Keep the original guard and select a different actual guard.</span>
+                    </div>
+                    <div class="info-item">
+                        <strong>Other results</strong>
+                        <span>Absent, Rest, Leave, Cancelled and Pending receive no duty credit.</span>
+                    </div>
+                </div>
+
+                {% set can_edit = current_user.role in ['ADMIN', 'SUPERVISOR'] %}
+
+                {% if not can_edit %}
+                    <div class="readonly-note">You have read-only access. You can view duty records but cannot change or save them.</div>
+                {% endif %}
+
+                <div class="table-top">
+                    <div>
+                        <strong style="color:#142b49;font-size:13px;">Duty slots</strong>
+                        <div class="helper">Guard dropdowns are sorted by Guard ID (G2 before G10).</div>
+                    </div>
+                    <span class="slot-count">{{ roster_rows|length }} / 15 slots</span>
+                </div>
+
+                {% if roster_rows|length != 15 %}
+                    <div class="flash warning">This date sheet currently contains {{ roster_rows|length }} active slots. The system is configured for 15; please verify the post/shift availability settings.</div>
+                {% endif %}
+
+                <form method="POST" action="{{ url_for('roster') }}" id="dutyForm">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="duty_date" value="{{ selected_date }}">
+
+                    <div class="table-wrap">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Shift &amp; timing</th>
+                                    <th>Post</th>
+                                    <th>Originally assigned guard</th>
+                                    <th>Actually performed by</th>
+                                    <th>Duty result</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                            {% for item in roster_rows %}
+                                {% set key = item.shift_id|string + '_' + item.post_id|string %}
+                                <tr class="duty-row">
+                                    <td class="shift-cell">
+                                        <span class="shift-name">{{ item.shift_name }}</span>
+                                        <span class="shift-time">{{ item.start_time }} – {{ item.end_time }}</span>
+                                        {% if item.shift_name == 'Shift 3' %}
+                                            <span class="night-note">Overnight · ends next day</span>
+                                        {% endif %}
+                                    </td>
+                                    <td><span class="post-pill">{{ item.post_code }}</span></td>
+                                    <td>
+                                        {% if can_edit %}
+                                            <select class="planned-select" name="planned_{{ key }}" data-row="{{ key }}">
+                                                <option value="">Not assigned</option>
+                                                {% for guard in guards %}
+                                                    <option value="{{ guard.guard_id }}"
+                                                        {% if item.planned_guard_id|string == guard.guard_id|string %}selected{% endif %}
+                                                        {% if guard.day_status in ['REST', 'LEAVE'] and item.planned_guard_id|string != guard.guard_id|string %}disabled{% endif %}>
+                                                        {{ guard.guard_id }} · {{ guard.guard_name }}{% if not guard.is_active %} (Inactive){% endif %}{% if guard.day_status %} · {{ guard.day_status }}{% endif %}
+                                                    </option>
+                                                {% endfor %}
+                                            </select>
+                                        {% else %}
+                                            {{ item.planned_guard_name or 'Not assigned' }}
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if can_edit %}
+                                            <select class="actual-select" name="actual_{{ key }}" data-row="{{ key }}">
+                                                <option value="">Select only for replacement</option>
+                                                {% for guard in guards %}
+                                                    <option value="{{ guard.guard_id }}"
+                                                        {% if item.actual_status == 'REPLACED' and item.actual_guard_id|string == guard.guard_id|string %}selected{% endif %}
+                                                        {% if guard.day_status in ['REST', 'LEAVE'] and item.actual_guard_id|string != guard.guard_id|string %}disabled{% endif %}>
+                                                        {{ guard.guard_id }} · {{ guard.guard_name }}{% if not guard.is_active %} (Inactive){% endif %}{% if guard.day_status %} · {{ guard.day_status }}{% endif %}
+                                                    </option>
+                                                {% endfor %}
+                                            </select>
+                                            <div class="helper actual-help">Used only when Duty Result is Replaced.</div>
+                                        {% else %}
+                                            {{ item.actual_guard_name or '—' }}
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if can_edit %}
+                                            <select class="result-select" name="status_{{ key }}" data-row="{{ key }}">
+                                                <option value="">Select result</option>
+                                                {% for status in ['PENDING', 'PRESENT', 'REPLACED', 'ABSENT', 'REST', 'LEAVE', 'CANCELLED'] %}
+                                                    <option value="{{ status }}" {% if item.actual_status == status %}selected{% endif %}>{{ status|title }}</option>
+                                                {% endfor %}
+                                            </select>
+                                        {% else %}
+                                            {{ item.actual_status|title if item.actual_status else 'Not entered' }}
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            {% else %}
+                                <tr><td colspan="5" class="empty-state">No active duty slots were found.</td></tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    {% if can_edit %}
+                        <div class="save-footer">
+                            <p class="save-note">
+                                Save All replaces the complete duty sheet for this date in one database transaction.
+                                Blank rows are cleared. If validation fails, the previous saved records remain unchanged.
+                            </p>
+                            <button type="submit" class="btn btn-primary save-button">Save All Duty Records</button>
+                        </div>
+                    {% endif %}
+                </form>
+            </section>
+        </div>
+    </main>
 </div>
+
+<script>
+(function () {
+    const form = document.getElementById("dutyForm");
+    if (!form) return;
+
+    function updateRow(rowKey) {
+        const planned = form.querySelector('.planned-select[data-row="' + rowKey + '"]');
+        const actual = form.querySelector('.actual-select[data-row="' + rowKey + '"]');
+        const result = form.querySelector('.result-select[data-row="' + rowKey + '"]');
+
+        if (!planned || !actual || !result) return;
+
+        if (result.value === "PRESENT") {
+            actual.value = planned.value;
+            actual.disabled = true;
+        } else if (result.value === "REPLACED") {
+            actual.disabled = false;
+            if (actual.value === planned.value) actual.value = "";
+        } else {
+            actual.value = "";
+            actual.disabled = true;
+        }
+    }
+
+    form.querySelectorAll(".duty-row").forEach(row => {
+        const result = row.querySelector(".result-select");
+        const planned = row.querySelector(".planned-select");
+        const actual = row.querySelector(".actual-select");
+        if (!result || !planned || !actual) return;
+
+        const rowKey = result.dataset.row;
+        result.addEventListener("change", () => updateRow(rowKey));
+        planned.addEventListener("change", () => {
+            if (result.value === "PRESENT") updateRow(rowKey);
+        });
+        updateRow(rowKey);
+    });
+
+    form.addEventListener("submit", function (event) {
+        const missing = [];
+        form.querySelectorAll(".duty-row").forEach(row => {
+            const planned = row.querySelector(".planned-select");
+            const actual = row.querySelector(".actual-select");
+            const result = row.querySelector(".result-select");
+            if (!planned || !actual || !result) return;
+
+            if (result.value === "PRESENT" && !planned.value) {
+                missing.push("Choose the originally assigned guard for every Present result.");
+            }
+            if (result.value === "REPLACED" && (!planned.value || !actual.value)) {
+                missing.push("For every Replaced result, choose both the original and replacement guards.");
+            }
+        });
+
+        if (missing.length) {
+            event.preventDefault();
+            alert([...new Set(missing)].join("\\n"));
+        }
+    });
+})();
+</script>
 </body>
 </html>
