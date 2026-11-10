@@ -93,7 +93,7 @@ def load_user(user_id):
             )
             user = cursor.fetchone()
 
-        if user:
+        if user and user["is_active"]:
             return User(
                 user["user_id"],
                 user["username"],
@@ -617,146 +617,217 @@ def attendance():
 @app.route("/availability", methods=["GET", "POST"])
 @login_required
 def availability():
-
-    connection = get_db_connection()
-    cursor = connection.cursor()
+    selected_date = request.values.get("duty_date") or date.today().isoformat()
 
     try:
-        selected_date = request.values.get("duty_date") or date.today().isoformat()
+        date.fromisoformat(selected_date)
+    except ValueError:
+        flash("Invalid date selected.", "error")
+        return redirect(url_for("availability"))
 
-        # Validate the selected date
-        try:
-            date.fromisoformat(selected_date)
-        except ValueError:
-            flash("Invalid date selected.")
-            return redirect(url_for("availability"))
+    if request.method == "POST" and current_user.role not in ["ADMIN", "SUPERVISOR"]:
+        flash("You do not have permission to update Rest & Leave.", "error")
+        return redirect(url_for("availability", duty_date=selected_date))
 
-        # Save or clear Rest/Leave status
-        if request.method == "POST":
+    connection = get_db_connection()
+    try:
+        with connection.cursor() as cursor:
+            if request.method == "POST":
+                # Only active guards are part of the daily availability sheet.
+                cursor.execute(
+                    "SELECT guard_id FROM guards WHERE is_active = TRUE"
+                )
+                active_guard_ids = [row["guard_id"] for row in cursor.fetchall()]
 
-            if current_user.role not in ["ADMIN", "SUPERVISOR"]:
-                flash("You do not have permission to update availability.")
+                updates = []
+                for guard_id in active_guard_ids:
+                    status = request.form.get(f"status_{guard_id}", "").strip().upper()
+                    if status not in ["", "REST", "LEAVE"]:
+                        flash(f"Invalid status for guard {guard_id}.", "error")
+                        return redirect(url_for("availability", duty_date=selected_date))
+                    if status:
+                        updates.append((guard_id, selected_date, status))
+
+                # An empty row means Available. Delete only the selected date's
+                # records for active guards; inactive guards' history is retained.
+                if active_guard_ids:
+                    placeholders = ",".join(["%s"] * len(active_guard_ids))
+                    cursor.execute(
+                        f"DELETE FROM guard_day_status WHERE duty_date = %s "
+                        f"AND guard_id IN ({placeholders})",
+                        [selected_date] + active_guard_ids
+                    )
+
+                if updates:
+                    cursor.executemany(
+                        """
+                        INSERT INTO guard_day_status (guard_id, duty_date, status)
+                        VALUES (%s, %s, %s)
+                        """,
+                        updates
+                    )
+
+                connection.commit()
+                flash("Rest & Leave records saved successfully.", "success")
                 return redirect(url_for("availability", duty_date=selected_date))
 
-            guard_id = request.form.get("guard_id")
-            status = request.form.get("status")
-
-            if status not in ["", "REST", "LEAVE"]:
-                flash("Invalid availability status.")
-                return redirect(url_for("availability", duty_date=selected_date))
-
-            # Check that the guard exists
             cursor.execute(
-                "SELECT guard_id FROM guards WHERE guard_id = %s",
-                (guard_id,)
+                """
+                SELECT g.guard_id, g.guard_name, gs.status AS day_status
+                FROM guards g
+                LEFT JOIN guard_day_status gs
+                    ON gs.guard_id = g.guard_id AND gs.duty_date = %s
+                WHERE g.is_active = TRUE
+                """,
+                (selected_date,)
             )
+            guards = sorted(cursor.fetchall(), key=natural_guard_sort_key)
 
-            if not cursor.fetchone():
-                flash("Guard not found.")
-                return redirect(url_for("availability", duty_date=selected_date))
-
-            if status == "":
-                # Clear existing Rest/Leave status
-                cursor.execute("""
-                    DELETE FROM guard_day_status
-                    WHERE guard_id = %s AND duty_date = %s
-                """, (guard_id, selected_date))
-
-                flash("Availability status cleared.")
-
-            else:
-                # Add or update Rest/Leave status
-                cursor.execute("""
-                    INSERT INTO guard_day_status
-                    (guard_id, duty_date, status)
-                    VALUES (%s, %s, %s)
-                    ON DUPLICATE KEY UPDATE
-                    status = VALUES(status)
-                """, (guard_id, selected_date, status))
-
-                flash("Rest/Leave status saved successfully.")
-
-            connection.commit()
-
-            return redirect(url_for("availability", duty_date=selected_date))
-
-        # Load all guards and their status for the selected date
-        cursor.execute("""
-            SELECT
-                g.guard_id,
-                g.guard_name,
-                g.is_active,
-                gs.status AS day_status
-            FROM guards g
-            LEFT JOIN guard_day_status gs
-                ON g.guard_id = gs.guard_id
-                AND gs.duty_date = %s
-            WHERE g.is_active = TRUE
-        """, (selected_date,))
-
-        guards = cursor.fetchall()
-        guards = sorted(guards, key=natural_guard_sort_key)
+        rest_count = sum(1 for guard in guards if guard["day_status"] == "REST")
+        leave_count = sum(1 for guard in guards if guard["day_status"] == "LEAVE")
+        available_count = len(guards) - rest_count - leave_count
 
         return render_template(
             "availability.html",
             guards=guards,
-            selected_date=selected_date
+            selected_date=selected_date,
+            rest_count=rest_count,
+            leave_count=leave_count,
+            available_count=available_count
         )
-
+    except Exception:
+        connection.rollback()
+        raise
     finally:
-        cursor.close()
         connection.close()
 
 @app.route("/users", methods=["GET", "POST"])
 @login_required
 def manage_users():
-
-    # Only Admin can access this page
     if current_user.role != "ADMIN":
-        flash("You are not authorized to access this page.")
+        flash("You are not authorized to access this page.", "error")
         return redirect(url_for("dashboard"))
 
+    allowed_roles = {"ADMIN", "SUPERVISOR", "VIEWER"}
+    main_admin_username = "Admin"
     connection = get_db_connection()
 
     try:
         with connection.cursor() as cursor:
-
             if request.method == "POST":
-                username = request.form.get("username", "").strip()
-                password = request.form.get("password", "")
+                action = request.form.get("action", "").strip().lower()
 
-                if not username or not password:
-                    flash("Username and password are required.")
+                if action == "create":
+                    username = request.form.get("username", "").strip()
+                    password = request.form.get("password", "")
+                    role = request.form.get("role", "VIEWER").strip().upper()
 
-                elif len(username) > 50:
-                    flash("Username cannot exceed 50 characters.")
-
-                elif len(password) < 12:
-                    flash("Password must be at least 12 characters.")
-
-                else:
-                    cursor.execute(
-                        "SELECT user_id FROM users WHERE username = %s",
-                        (username,)
-                    )
-
-                    if cursor.fetchone():
-                        flash("This username already exists.")
-
+                    if not username or not password:
+                        flash("Username and password are required.", "error")
+                    elif len(username) > 50:
+                        flash("Username cannot exceed 50 characters.", "error")
+                    elif len(password) < 8:
+                        flash("Password must be at least 8 characters.", "error")
+                    elif role not in allowed_roles:
+                        flash("Please select a valid account role.", "error")
                     else:
-                        password_hash = generate_password_hash(password)
-
                         cursor.execute(
-                            """
-                            INSERT INTO users
-                            (username, password_hash, role, is_active)
-                            VALUES (%s, %s, 'SUPERVISOR', 1)
-                            """,
-                            (username, password_hash)
+                            "SELECT user_id FROM users WHERE LOWER(username) = LOWER(%s)",
+                            (username,)
                         )
+                        if cursor.fetchone():
+                            flash("This username already exists.", "error")
+                        else:
+                            cursor.execute(
+                                """
+                                INSERT INTO users (username, password_hash, role, is_active)
+                                VALUES (%s, %s, %s, 1)
+                                """,
+                                (username, generate_password_hash(password), role)
+                            )
+                            connection.commit()
+                            flash(f"{role.title()} account created successfully.", "success")
 
-                        connection.commit()
-                        flash("Supervisor account created successfully!")
+                elif action == "update":
+                    target_id = request.form.get("user_id", "").strip()
+                    username = request.form.get("username", "").strip()
+                    role = request.form.get("role", "").strip().upper()
+                    is_active_value = request.form.get("is_active", "1")
+                    new_password = request.form.get("new_password", "")
+
+                    cursor.execute(
+                        "SELECT user_id, username, role, is_active FROM users WHERE user_id = %s",
+                        (target_id,)
+                    )
+                    target = cursor.fetchone()
+
+                    if not target:
+                        flash("Account not found.", "error")
+                    else:
+                        is_main_target = target["username"].casefold() == main_admin_username.casefold()
+                        is_self = str(target["user_id"]) == str(current_user.id)
+
+                        # The protected Admin account cannot be changed by another
+                        # administrator. Its own password can still be changed by
+                        # the main account itself, but its identity and role stay fixed.
+                        if is_main_target and not is_self:
+                            flash("The main Admin account is protected and cannot be modified.", "error")
+                        elif is_main_target and is_self:
+                            if username != main_admin_username or role != "ADMIN" or is_active_value != "1":
+                                flash("The main Admin username, role, and active status are protected.", "error")
+                            elif new_password and len(new_password) < 8:
+                                flash("Password must be at least 8 characters.", "error")
+                            elif new_password:
+                                cursor.execute(
+                                    "UPDATE users SET password_hash = %s WHERE user_id = %s",
+                                    (generate_password_hash(new_password), target_id)
+                                )
+                                connection.commit()
+                                flash("Main Admin password updated successfully.", "success")
+                            else:
+                                flash("No changes to save for the protected main Admin account.", "info")
+                        elif not username or len(username) > 50:
+                            flash("Username is required and must be 50 characters or fewer.", "error")
+                        elif role not in allowed_roles:
+                            flash("Please select a valid account role.", "error")
+                        elif is_active_value not in ["0", "1"]:
+                            flash("Invalid account status.", "error")
+                        elif new_password and len(new_password) < 8:
+                            flash("New password must be at least 8 characters.", "error")
+                        else:
+                            cursor.execute(
+                                "SELECT user_id FROM users WHERE LOWER(username) = LOWER(%s) AND user_id <> %s",
+                                (username, target_id)
+                            )
+                            duplicate = cursor.fetchone()
+                            if duplicate:
+                                flash("That username is already in use.", "error")
+                            elif is_self and (role != "ADMIN" or is_active_value != "1"):
+                                flash("You cannot remove your own Admin access or deactivate your account.", "error")
+                            else:
+                                if new_password:
+                                    cursor.execute(
+                                        """
+                                        UPDATE users
+                                        SET username = %s, role = %s, is_active = %s, password_hash = %s
+                                        WHERE user_id = %s
+                                        """,
+                                        (username, role, int(is_active_value),
+                                         generate_password_hash(new_password), target_id)
+                                    )
+                                else:
+                                    cursor.execute(
+                                        """
+                                        UPDATE users
+                                        SET username = %s, role = %s, is_active = %s
+                                        WHERE user_id = %s
+                                        """,
+                                        (username, role, int(is_active_value), target_id)
+                                    )
+                                connection.commit()
+                                flash("Account updated successfully.", "success")
+                else:
+                    flash("Invalid account action.", "error")
 
                 return redirect(url_for("manage_users"))
 
@@ -767,11 +838,12 @@ def manage_users():
                 ORDER BY user_id
                 """
             )
-
             users = cursor.fetchall()
-
-            return render_template("users.html", users=users)
-
+            return render_template(
+                "users.html",
+                users=users,
+                main_admin_username=main_admin_username
+            )
     finally:
         connection.close()
 

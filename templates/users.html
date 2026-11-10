@@ -1,172 +1,70 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Manage Users - GDMS</title>
-
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background: #f3f4f6;
-            margin: 0;
-            padding: 25px;
-            color: #222;
-        }
-
-        .container {
-            max-width: 850px;
-            margin: auto;
-        }
-
-        .card {
-            background: white;
-            padding: 25px;
-            margin-bottom: 20px;
-            border-radius: 10px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-        }
-
-        h2 {
-            margin-top: 0;
-            color: #1e293b;
-        }
-
-        input {
-            width: 100%;
-            padding: 12px;
-            margin: 8px 0 15px;
-            box-sizing: border-box;
-            border: 1px solid #ccc;
-            border-radius: 6px;
-        }
-
-        button {
-            background: #2563eb;
-            color: white;
-            padding: 12px 20px;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-        }
-
-        button:hover {
-            background: #1d4ed8;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        th, td {
-            padding: 12px;
-            border-bottom: 1px solid #ddd;
-            text-align: left;
-        }
-
-        th {
-            background: #f1f5f9;
-        }
-
-        .message {
-            background: #e0f2fe;
-            padding: 12px;
-            margin-bottom: 12px;
-            border-radius: 6px;
-        }
-
-        .back {
-            display: inline-block;
-            margin-bottom: 20px;
-            color: #2563eb;
-            text-decoration: none;
-        }
-
-        .status-active {
-            color: green;
-            font-weight: bold;
-        }
-
-        .status-inactive {
-            color: red;
-            font-weight: bold;
-        }
-    </style>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Manage Users | GDMS</title>
+<style>
+:root{--navy:#142b49;--blue:#2563eb;--bg:#f3f6fb;--text:#1e293b;--muted:#64748b;--line:#e5eaf2;--white:#fff;--green:#15803d;--red:#b91c1c}*{box-sizing:border-box}body{margin:0;background:var(--bg);font-family:"Segoe UI",Arial,sans-serif;color:var(--text)}
+.topbar{background:linear-gradient(110deg,var(--navy),#244b78);color:white;padding:25px max(22px,calc((100% - 1250px)/2));display:flex;align-items:center;justify-content:space-between;gap:15px;flex-wrap:wrap}.topbar h1{font-size:22px;margin:0}.topbar p{font-size:13px;color:#c7d6e8;margin:5px 0 0}.back{color:#fff;text-decoration:none;border:1px solid #ffffff55;border-radius:9px;padding:10px 14px;font-size:13px}.back:hover{background:#ffffff18}main{max-width:1250px;margin:28px auto;padding:0 22px 40px}.panel{background:#fff;border:1px solid var(--line);border-radius:15px;padding:22px;margin-bottom:20px;box-shadow:0 5px 20px #19375b08}.panel h2{font-size:17px;color:var(--navy);margin:0}.sub{font-size:13px;color:var(--muted);margin:6px 0 18px}.flash{padding:12px 15px;border-radius:10px;margin-bottom:14px;background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;font-size:13px}.flash.error{background:#fef2f2;color:#b91c1c;border-color:#fecaca}.flash.success{background:#f0fdf4;color:#166534;border-color:#bbf7d0}.flash.info{background:#f8fafc;color:#475569;border-color:#e2e8f0}
+.create-grid{display:grid;grid-template-columns:1.2fr 1.2fr .9fr 1fr auto;gap:12px;align-items:end}.field label{display:block;font-size:12px;font-weight:700;color:#475569;margin-bottom:7px}.field input,.field select,.cell-input,.cell-select{width:100%;height:40px;border:1px solid #cbd5e1;border-radius:8px;padding:0 10px;background:#fff;color:var(--text);font:inherit;font-size:13px}.field input:focus,.field select:focus,.cell-input:focus,.cell-select:focus{outline:3px solid #2563eb20;border-color:var(--blue)}.btn{border:0;border-radius:9px;padding:11px 17px;background:var(--blue);color:#fff;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap}.btn:hover{background:#1d4ed8}.btn-save{padding:9px 13px}.btn-disabled{background:#94a3b8;cursor:not-allowed}.table-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px}table{width:100%;border-collapse:collapse;min-width:980px}th{background:#f7f9fc;color:#526176;text-transform:uppercase;letter-spacing:.05em;font-size:10px;text-align:left;padding:13px 12px}td{padding:12px;border-top:1px solid var(--line);font-size:13px;vertical-align:middle}tbody tr:hover{background:#fafcff}.account-name{font-weight:700;color:var(--navy)}.role-pill,.status-pill{display:inline-block;padding:5px 9px;border-radius:20px;font-size:10px;font-weight:800;letter-spacing:.03em;background:#eff6ff;color:#1d4ed8}.role-admin{background:#ede9fe;color:#6d28d9}.role-supervisor{background:#e0f2fe;color:#0369a1}.role-viewer{background:#f1f5f9;color:#475569}.status-active{background:#dcfce7;color:#166534}.status-inactive{background:#fee2e2;color:#991b1b}.protected{font-size:10px;font-weight:800;color:#7c3aed;margin-left:6px}.row-form{display:flex;align-items:center;gap:7px}.row-form .cell-input{min-width:120px}.row-form .password{min-width:135px}.row-form .cell-select{min-width:115px}.protected-note{color:var(--muted);font-size:12px}.table-note{color:var(--muted);font-size:12px;margin-top:12px}
+@media(max-width:900px){.create-grid{grid-template-columns:1fr 1fr}.create-grid .btn{height:40px}}@media(max-width:560px){.topbar{padding:20px}.topbar h1{font-size:19px}main{padding:0 12px 25px;margin-top:15px}.panel{padding:16px}.create-grid{grid-template-columns:1fr}.create-grid .btn{width:100%}}
+</style>
 </head>
-
 <body>
-<div class="container">
-
-    <a class="back" href="{{ url_for('dashboard') }}">
-        ← Back to Dashboard
-    </a>
-
-    <div class="card">
-        <h2>Create Supervisor Account</h2>
-
-        {% with messages = get_flashed_messages() %}
-            {% for message in messages %}
-                <div class="message">{{ message }}</div>
-            {% endfor %}
-        {% endwith %}
-
-        <form method="POST">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-
-            <label>Supervisor Username</label>
-            <input
-                type="text"
-                name="username"
-                maxlength="50"
-                required
-                placeholder="Enter username"
-            >
-
-            <label>Supervisor Password</label>
-            <input
-                type="password"
-                name="password"
-                minlength="12"
-                required
-                placeholder="Minimum 12 characters"
-            >
-
-            <button type="submit">Create Supervisor</button>
-        </form>
-    </div>
-
-    <div class="card">
-        <h2>Existing User Accounts</h2>
-
-        <table>
-            <thead>
-                <tr>
-                    <th>Username</th>
-                    <th>Role</th>
-                    <th>Status</th>
-                </tr>
-            </thead>
-
-            <tbody>
-                {% for user in users %}
-                <tr>
-                    <td>{{ user.username }}</td>
-                    <td>{{ user.role }}</td>
-                    <td>
-                        {% if user.is_active %}
-                            <span class="status-active">Active</span>
-                        {% else %}
-                            <span class="status-inactive">Inactive</span>
-                        {% endif %}
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-
-</div>
+<header class="topbar"><div><h1>Manage User Accounts</h1><p>Create accounts, manage access roles, and update credentials</p></div><a class="back" href="{{ url_for('dashboard') }}">← Dashboard</a></header>
+<main>
+{% with messages = get_flashed_messages(with_categories=true) %}{% for category,message in messages %}<div class="flash {{ category }}">{{ message }}</div>{% endfor %}{% endwith %}
+<section class="panel">
+    <h2>Create a new account</h2><p class="sub">Choose the access level. Passwords must contain at least 8 characters.</p>
+    <form method="POST" class="create-grid">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="action" value="create">
+        <div class="field"><label for="new_username">Username</label><input id="new_username" type="text" name="username" maxlength="50" required placeholder="Enter username"></div>
+        <div class="field"><label for="new_password">Password</label><input id="new_password" type="password" name="password" minlength="8" required placeholder="Minimum 8 characters"></div>
+        <div class="field"><label for="new_role">Account role</label><select id="new_role" name="role" required><option value="VIEWER">Viewer</option><option value="SUPERVISOR">Supervisor</option><option value="ADMIN">Admin</option></select></div>
+        <div class="field"><label>Account status</label><input type="text" value="Active on creation" disabled></div>
+        <button class="btn" type="submit">＋ Create Account</button>
+    </form>
+</section>
+<section class="panel">
+    <h2>Existing accounts</h2><p class="sub">Administrators can update usernames, roles, status, and passwords. The main Admin account is protected from changes by other accounts.</p>
+    <div class="table-wrap"><table>
+        <thead><tr><th>Account</th><th>Role</th><th>Status</th><th>Created</th><th>Account controls</th></tr></thead>
+        <tbody>
+        {% for user in users %}
+            {% set is_main = user.username|lower == main_admin_username|lower %}
+            {% set is_self = user.user_id|string == current_user.id|string %}
+            <tr>
+                <td><span class="account-name">{{ user.username }}</span>{% if is_main %}<span class="protected">MAIN ADMIN</span>{% endif %}</td>
+                <td><span class="role-pill role-{{ user.role|lower }}">{{ user.role }}</span></td>
+                <td><span class="status-pill {{ 'status-active' if user.is_active else 'status-inactive' }}">{{ 'Active' if user.is_active else 'Inactive' }}</span></td>
+                <td>{{ user.created_at.strftime('%d %b %Y') if user.created_at else '—' }}</td>
+                <td>
+                    {% if is_main and not is_self %}
+                        <span class="protected-note">Protected main account</span>
+                    {% elif is_main and is_self %}
+                        <form method="POST" class="row-form" id="update-{{ user.user_id }}">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="action" value="update"><input type="hidden" name="user_id" value="{{ user.user_id }}">
+                            <input type="hidden" name="username" value="{{ main_admin_username }}"><input type="hidden" name="role" value="ADMIN"><input type="hidden" name="is_active" value="1">
+                            <input class="cell-input password" type="password" name="new_password" minlength="8" placeholder="New password (optional)">
+                            <button class="btn btn-save" type="submit">Update Password</button>
+                        </form>
+                    {% else %}
+                        <form method="POST" class="row-form" id="update-{{ user.user_id }}">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="action" value="update"><input type="hidden" name="user_id" value="{{ user.user_id }}">
+                            <input class="cell-input" type="text" name="username" value="{{ user.username }}" maxlength="50" required aria-label="Username">
+                            <select class="cell-select" name="role" aria-label="Role"><option value="VIEWER" {% if user.role == 'VIEWER' %}selected{% endif %}>Viewer</option><option value="SUPERVISOR" {% if user.role == 'SUPERVISOR' %}selected{% endif %}>Supervisor</option><option value="ADMIN" {% if user.role == 'ADMIN' %}selected{% endif %}>Admin</option></select>
+                            <select class="cell-select" name="is_active" aria-label="Account status"><option value="1" {% if user.is_active %}selected{% endif %}>Active</option><option value="0" {% if not user.is_active %}selected{% endif %}>Inactive</option></select>
+                            <input class="cell-input password" type="password" name="new_password" minlength="8" placeholder="New password (optional)" aria-label="New password">
+                            <button class="btn btn-save" type="submit">Save</button>
+                        </form>
+                    {% endif %}
+                </td>
+            </tr>
+        {% else %}<tr><td colspan="5" style="text-align:center;padding:25px;color:#64748b">No user accounts found.</td></tr>{% endfor %}
+        </tbody>
+    </table></div>
+    <p class="table-note">Leave the new password field empty to keep the current password. Password changes require at least 8 characters.</p>
+</section>
+</main>
 </body>
 </html>

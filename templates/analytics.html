@@ -1,204 +1,67 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GDMS | Duty Analytics</title>
-
-    <style>
-        body {
-            margin: 0;
-            font-family: Arial, sans-serif;
-            background: #eef2f7;
-            color: #183153;
-        }
-
-        header {
-            background: #183153;
-            color: white;
-            padding: 20px 30px;
-        }
-
-        main {
-            padding: 25px;
-            max-width: 1100px;
-            margin: auto;
-        }
-
-        .panel {
-            background: white;
-            padding: 20px;
-            border-radius: 10px;
-            margin-bottom: 20px;
-        }
-
-        .filters {
-            display: flex;
-            gap: 15px;
-            flex-wrap: wrap;
-            align-items: end;
-        }
-
-        label {
-            display: block;
-            margin-bottom: 6px;
-        }
-
-        input, button {
-            padding: 10px;
-            border-radius: 5px;
-            border: 1px solid #ccc;
-        }
-
-        button {
-            background: #183153;
-            color: white;
-            cursor: pointer;
-        }
-
-        .cards {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-            gap: 15px;
-        }
-
-        .card {
-            background: #f4f7fb;
-            padding: 20px;
-            border-radius: 8px;
-        }
-
-        .number {
-            font-size: 30px;
-            font-weight: bold;
-            margin: 8px 0;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        th, td {
-            padding: 12px;
-            border-bottom: 1px solid #ddd;
-            text-align: left;
-        }
-
-        th {
-            background: #f4f7fb;
-        }
-
-        .table-wrap {
-            overflow-x: auto;
-        }
-
-        a {
-            color: #183153;
-        }
-
-        @media (max-width: 600px) {
-            main {
-                padding: 12px;
-            }
-        }
-    </style>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Duty Analytics | GDMS</title>
+<style>
+:root{--navy:#142b49;--blue:#2563eb;--bg:#f3f6fb;--text:#1e293b;--muted:#64748b;--line:#e5eaf2;--white:#fff}*{box-sizing:border-box}body{margin:0;background:var(--bg);font-family:"Segoe UI",Arial,sans-serif;color:var(--text)}
+.topbar{background:linear-gradient(110deg,var(--navy),#244b78);color:white;padding:25px max(22px,calc((100% - 1180px)/2));display:flex;align-items:center;justify-content:space-between;gap:15px;flex-wrap:wrap}.topbar h1{font-size:22px;margin:0}.topbar p{font-size:13px;color:#c7d6e8;margin:5px 0 0}.back{color:#fff;text-decoration:none;border:1px solid #ffffff55;border-radius:9px;padding:10px 14px;font-size:13px}.back:hover{background:#ffffff18}main{max-width:1180px;margin:28px auto;padding:0 22px 40px}.panel{background:#fff;border:1px solid var(--line);border-radius:15px;padding:22px;margin-bottom:20px;box-shadow:0 5px 20px #19375b08}.panel h2{font-size:17px;color:var(--navy);margin:0}.sub{font-size:13px;color:var(--muted);margin:6px 0 18px}.filters{display:flex;gap:13px;align-items:end;flex-wrap:wrap}.field label{display:block;font-size:12px;font-weight:700;color:#475569;margin-bottom:7px}.field input{height:42px;min-width:190px;padding:0 12px;border:1px solid #cbd5e1;border-radius:9px;font:inherit;color:var(--text)}.btn{height:42px;border:0;border-radius:9px;padding:0 17px;background:var(--blue);color:#fff;font-size:13px;font-weight:700;cursor:pointer}.btn:hover{background:#1d4ed8}.cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}.stat{border:1px solid var(--line);border-radius:12px;padding:17px 19px;background:#fbfcfe}.stat span{display:block;font-size:12px;color:var(--muted);font-weight:600}.stat strong{display:block;font-size:29px;color:var(--navy);margin-top:7px}.stat small{font-size:11px;color:var(--muted)}.table-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px}table{width:100%;border-collapse:collapse;min-width:650px}th{background:#f7f9fc;color:#526176;font-size:11px;text-transform:uppercase;letter-spacing:.05em;text-align:left;padding:0;border-bottom:1px solid var(--line)}th button{width:100%;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:14px 15px;border:0;background:transparent;color:inherit;font:inherit;font-weight:800;text-transform:inherit;letter-spacing:inherit;text-align:left;cursor:pointer}th button:hover{background:#eef4ff;color:#1d4ed8}th button:focus-visible{outline:3px solid #2563eb55;outline-offset:-3px}th .sort-icon{font-size:12px;color:#94a3b8}td{padding:14px 15px;border-top:1px solid var(--line);font-size:13px}tbody tr:hover{background:#fafcff}.guard-id{font-weight:800;color:var(--navy)}.total-cell{font-weight:800;color:#1d4ed8}.empty{text-align:center;color:var(--muted);padding:28px}.flash{padding:12px 15px;border-radius:10px;margin-bottom:14px;background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;font-size:13px}
+@media(max-width:700px){.topbar{padding:20px}.topbar h1{font-size:19px}main{padding:0 12px 25px;margin-top:15px}.panel{padding:16px}.cards{grid-template-columns:1fr}.filters{align-items:stretch}.field{flex:1}.field input{width:100%;min-width:0}.filters .btn{width:100%}}
+</style>
 </head>
-
 <body>
-
-<header>
-    <h2>Duty Analytics</h2>
-</header>
-
+<header class="topbar"><div><h1>Duty Analytics</h1><p>Review guard duty distribution and performance</p></div><a class="back" href="{{ url_for('dashboard') }}">← Dashboard</a></header>
 <main>
-
-    <p><a href="{{ url_for('dashboard') }}">← Back to Dashboard</a></p>
-
-    <div class="panel">
-        <h3>Select Report Period</h3>
-
-        <form method="GET" class="filters">
-
-            <div>
-                <label>Start Date</label>
-                <input type="date" name="start_date"
-                       value="{{ start_date }}" required>
-            </div>
-
-            <div>
-                <label>End Date</label>
-                <input type="date" name="end_date"
-                       value="{{ end_date }}" required>
-            </div>
-
-            <button type="submit">Generate Report</button>
-
-        </form>
-    </div>
-
-    <div class="panel">
-        <h3>Overall Duty Summary</h3>
-
-        <div class="cards">
-
-            <div class="card">
-                <div>Day Duties</div>
-                <div class="number">{{ total_day }}</div>
-                <small>Shift 1 + Shift 2</small>
-            </div>
-
-            <div class="card">
-                <div>Night Duties</div>
-                <div class="number">{{ total_night }}</div>
-                <small>Shift 3</small>
-            </div>
-
-            <div class="card">
-                <div>Total Duties</div>
-                <div class="number">{{ total_duties }}</div>
-                <small>Actually performed</small>
-            </div>
-
-        </div>
-    </div>
-
-    <div class="panel">
-        <h3>Guard-wise Duty Report</h3>
-
-        <div class="table-wrap">
-            <table>
-                <thead>
-                    <tr>
-                        <th>Guard ID</th>
-                        <th>Guard Name</th>
-                        <th>Day Duties</th>
-                        <th>Night Duties</th>
-                        <th>Total Duties</th>
-                    </tr>
-                </thead>
-
-                <tbody>
-                    {% for guard in guard_stats %}
-                    <tr>
-                        <td>{{ guard.guard_id }}</td>
-                        <td>{{ guard.guard_name }}</td>
-                        <td>{{ guard.day_duties or 0 }}</td>
-                        <td>{{ guard.night_duties or 0 }}</td>
-                        <td><strong>{{ guard.total_duties or 0 }}</strong></td>
-                    </tr>
-                    {% else %}
-                    <tr>
-                        <td colspan="5">No guard records found.</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </div>
-
+{% with messages = get_flashed_messages() %}{% for message in messages %}<div class="flash">{{ message }}</div>{% endfor %}{% endwith %}
+<section class="panel"><h2>Report period</h2><p class="sub">Choose the date range you want to analyse.</p>
+<form method="GET" class="filters">
+    <div class="field"><label for="start_date">Start date</label><input id="start_date" type="date" name="start_date" value="{{ start_date }}" required></div>
+    <div class="field"><label for="end_date">End date</label><input id="end_date" type="date" name="end_date" value="{{ end_date }}" required></div>
+    <button class="btn" type="submit">Generate Report</button>
+</form></section>
+<section class="panel"><h2>Overall duty summary</h2><p class="sub">Actual duties performed during the selected period.</p>
+<div class="cards"><div class="stat"><span>Day duties</span><strong>{{ total_day }}</strong><small>Shift 1 + Shift 2</small></div><div class="stat"><span>Night duties</span><strong>{{ total_night }}</strong><small>Shift 3</small></div><div class="stat"><span>Total duties</span><strong>{{ total_duties }}</strong><small>Present + Replacement duties</small></div></div></section>
+<section class="panel"><h2>Guard-wise duty report</h2><p class="sub">Select any column heading to sort. Select it again to reverse the order.</p>
+<div class="table-wrap"><table id="analytics-table">
+<thead><tr>
+    <th data-key="guard_id" data-type="text"><button type="button">Guard ID <span class="sort-icon">↕</span></button></th>
+    <th data-key="guard_name" data-type="text"><button type="button">Guard name <span class="sort-icon">↕</span></button></th>
+    <th data-key="day_duties" data-type="number"><button type="button">Day duties <span class="sort-icon">↕</span></button></th>
+    <th data-key="night_duties" data-type="number"><button type="button">Night duties <span class="sort-icon">↕</span></button></th>
+    <th data-key="total_duties" data-type="number"><button type="button">Total duties <span class="sort-icon">↕</span></button></th>
+</tr></thead>
+<tbody>
+{% for guard in guard_stats %}
+<tr><td class="guard-id">{{ guard.guard_id }}</td><td>{{ guard.guard_name }}</td><td>{{ guard.day_duties or 0 }}</td><td>{{ guard.night_duties or 0 }}</td><td class="total-cell">{{ guard.total_duties or 0 }}</td></tr>
+{% else %}<tr><td colspan="5" class="empty">No guard records found for this period.</td></tr>{% endfor %}
+</tbody></table></div></section>
 </main>
-
+<script>
+(() => {
+    const table = document.getElementById('analytics-table');
+    if (!table) return;
+    const body = table.tBodies[0];
+    const collator = new Intl.Collator(undefined, {numeric: true, sensitivity: 'base'});
+    table.querySelectorAll('thead th').forEach((header, columnIndex) => {
+        let direction = 0;
+        header.querySelector('button').addEventListener('click', () => {
+            direction = direction === 1 ? -1 : 1;
+            const type = header.dataset.type;
+            const rows = Array.from(body.rows).filter(row => row.cells.length === header.parentElement.cells.length);
+            rows.sort((a, b) => {
+                const av = a.cells[columnIndex].textContent.trim();
+                const bv = b.cells[columnIndex].textContent.trim();
+                const result = type === 'number' ? (Number(av || 0) - Number(bv || 0)) : collator.compare(av, bv);
+                return result * direction;
+            });
+            rows.forEach(row => body.appendChild(row));
+            table.querySelectorAll('.sort-icon').forEach(icon => icon.textContent = '↕');
+            header.querySelector('.sort-icon').textContent = direction === 1 ? '↑' : '↓';
+            table.querySelectorAll('thead th').forEach(th => th.removeAttribute('aria-sort'));
+            header.setAttribute('aria-sort', direction === 1 ? 'ascending' : 'descending');
+        });
+    });
+})();
+</script>
 </body>
 </html>
