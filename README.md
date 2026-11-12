@@ -5,7 +5,6 @@ GDMS is a Flask-based web application for maintaining guard records, entering da
 > **Version scope:** This README documents the current single-organization codebase in this project archive. It does not describe the planned multi-organization/SaaS architecture; tenant onboarding, tenant isolation, and configurable organization-specific duty rules are not implemented in this version.
 
 ## Current capabilities
-## Application Screenshots
 
 ## Application Screenshots
 
