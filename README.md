@@ -5,7 +5,19 @@ GDMS is a Flask-based web application for maintaining guard records, entering da
 > **Version scope:** This README documents the current single-organization codebase in this project archive. It does not describe the planned multi-organization/SaaS architecture; tenant onboarding, tenant isolation, and configurable organization-specific duty rules are not implemented in this version.
 
 ## Current capabilities
+## Application Screenshots
 
+### Dashboard
+![Dashboard](screenshots/dashboard.png)
+
+### Guard Management
+![Guard Management](screenshots/guards.png)
+
+### Duty Roster
+![Duty Roster](screenshots/roster.png)
+
+### Duty Analytics
+![Duty Analytics](screenshots/analytics.png)
 - **Login and roles:** authenticated access using Flask-Login. Supported roles are `ADMIN`, `SUPERVISOR`, and `VIEWER`.
 - **Dashboard:** application landing page and navigation to the main modules.
 - **Guard management:** add guards, edit guard names, and activate/deactivate guard records. Guard IDs are sorted naturally (for example, `G2` before `G10`).
