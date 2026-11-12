@@ -8,7 +8,7 @@ GDMS is a Flask-based web application for maintaining guard records, entering da
 ## Application Screenshots
 
 ### Dashboard
-![Dashboard](screenshots/dashboard.png)
+![Dashboard](screenshots/dashboard.png.png)
 
 ### Guard Management
 ![Guard Management](screenshots/guards.png)
